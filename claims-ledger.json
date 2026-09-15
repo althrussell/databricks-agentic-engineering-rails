@@ -8,15 +8,16 @@
     "expired": "Past its reverify interval. Treat every dependent statement as unsupported until rechecked."
   },
   "totals": {
-    "claims": 26,
+    "claims": 40,
     "by_method": {
+      "local-probe": 6,
+      "manual-read": 7,
+      "repo-file-read": 6,
       "web-fetch": 16,
-      "repo-file-read": 5,
-      "local-probe": 2,
-      "workspace-probe": 3
+      "workspace-probe": 5
     },
     "by_status": {
-      "verified": 24,
+      "verified": 38,
       "verified-absent": 2
     }
   },
@@ -254,7 +255,7 @@
         "02-harness-standard",
         "03-gateway-auth-and-governance"
       ],
-      "note": "Routes are exposed per workspace. A route documented here can still be absent on a given workspace — we observed exactly that (see probe-gw-route-coverage), which is why the pack teaches probing over assuming."
+      "note": "Routes are exposed per workspace. A route documented here can still be absent on a given workspace \u2014 we observed exactly that (see probe-gw-route-coverage), which is why the pack teaches probing over assuming."
     },
     {
       "id": "gw-claude-env",
@@ -431,6 +432,239 @@
         "12-operating-model-and-metrics"
       ],
       "note": "Listing proves existence, not queryability: no SELECT was executed, because that needs a running warehouse. lab-07 is what proves the query path."
+    },
+    {
+      "id": "cc-ask-beats-allow",
+      "claim": "In Claude Code permission rules a matching ask rule prompts even when a more specific allow rule also matches: ask takes precedence over allow, and deny takes precedence over both. A capability that must always prompt therefore cannot be expressed as an allow rule with an ask rule beside it.",
+      "source": "Claude Code settings and sandboxing reference, read at CLI version 2.1.272",
+      "evidence": "Ask rules are evaluated ahead of allow rules, so an ask match prompts regardless of any allow rule that also matches; deny is evaluated first of the three and is always respected.",
+      "evidence_locator": "claude-code 2.1.272",
+      "verification_method": "manual-read",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 90,
+      "status": "verified",
+      "used_in": [
+        "02-harness-standard"
+      ],
+      "note": "This is why permissions.yml's tool(Bash) and mcp(*) capabilities are rendered as mechanism substitutions in RENDER-NOTES.md rather than as rules: written as rules they would either prompt for everything or for nothing."
+    },
+    {
+      "id": "cc-autoallow-bash-if-sandboxed",
+      "claim": "Claude Code's autoAllowBashIfSandboxed setting defaults to true. With the sandbox enabled, a Bash command that can run sandboxed is approved with no prompt, and a bare Bash or Bash(*) ask rule is skipped for it. Content-scoped ask rules such as Bash(git push *) still prompt, and explicit deny rules are always respected.",
+      "source": "Claude Code settings and sandboxing reference, read at CLI version 2.1.272",
+      "evidence": "\"A bare `Bash` ask rule, or the equivalent `Bash(*)` form, is skipped for commands that run sandboxed\"; \"Explicit deny rules are always respected.\"",
+      "evidence_locator": "claude-code 2.1.272",
+      "verification_method": "manual-read",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 90,
+      "status": "verified",
+      "used_in": [
+        "02-harness-standard"
+      ],
+      "note": "The generated settings.json sets this to false. Left at its default, the ask tier's catch-all is inert on exactly the machines where the sandbox works, which is the opposite of the intended relationship between the two mechanisms."
+    },
+    {
+      "id": "cc-defaultmode-project-limit",
+      "claim": "Several Claude Code settings keys cannot be delivered from a project-scope file: the permissions.defaultMode values auto and bypassPermissions, sandbox.network.strictAllowlist and sandbox.filesystem.disabled. A committed file that sets them is read without error and has no effect.",
+      "source": "Claude Code settings and sandboxing reference, read at CLI version 2.1.272",
+      "evidence": "The settings reference marks these keys as ineffective in project scope; a project file that sets them produces no error and no change in behaviour.",
+      "evidence_locator": "claude-code 2.1.272",
+      "verification_method": "manual-read",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 90,
+      "status": "verified",
+      "used_in": [
+        "02-harness-standard",
+        "05-repo-ci-and-gates"
+      ],
+      "note": "Recorded because silent ineffectiveness is the dangerous kind. RENDER-NOTES.md lists these keys by name so that a reader never concludes a committed file delivered a setting the repository cannot deliver."
+    },
+    {
+      "id": "cc-bash-rule-limits",
+      "claim": "A Bash permission rule matches the command text the model wrote, after the harness splits compound commands and strips a short fixed list of wrappers. It is not a boundary around the program, so a rule anchored on the opening words of a command does not match the same command with a global option before the subcommand, or with the subcommand quoted.",
+      "source": "Claude Code settings and sandboxing reference, read at CLI version 2.1.272",
+      "evidence": "Rules are matched against the command string after splitting and wrapper stripping; the documented matching is textual and prefix-oriented, with no parsing of a program's own option grammar.",
+      "evidence_locator": "claude-code 2.1.272",
+      "verification_method": "manual-read",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 90,
+      "status": "verified",
+      "used_in": [
+        "02-harness-standard"
+      ],
+      "note": "The reason harness/shared/guards/never-automatic.sh normalises text before matching and is deployed alongside the rules rather than instead of them. Both mechanisms are evaded by different things, which is the argument for running both."
+    },
+    {
+      "id": "cc-mcp-var-expansion",
+      "claim": "A .mcp.json file expands ${VAR} in command, args, env, url and headers, while settings.json performs no variable expansion at all. The set of credential-looking variable names that read as empty in a remote server's url and headers is documented by example rather than exhaustively.",
+      "source": "Claude Code settings and sandboxing reference, read at CLI version 2.1.272",
+      "evidence": "The MCP configuration reference documents ${VAR} expansion across command, args, env, url and headers, and names credential-shaped variables as an example of what is not interpolated; the settings reference documents no expansion.",
+      "evidence_locator": "claude-code 2.1.272",
+      "verification_method": "manual-read",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 90,
+      "status": "verified",
+      "used_in": [
+        "02-harness-standard",
+        "04-skills-and-mcp"
+      ],
+      "note": "A configuration that silently interpolates an empty string produces a 401 that reads like a broken server. This asymmetry is the argument for a headersHelper over a literal ${TOKEN} header, and for a launcher over a committed env block."
+    },
+    {
+      "id": "cc-headershelper-contract",
+      "claim": "A .mcp.json headersHelper is a shell command that must print a JSON object of string pairs to stdout. It has a ten-second timeout, is run once per new connection, and is run again when the server answers 401 or 403.",
+      "source": "Claude Code settings and sandboxing reference, read at CLI version 2.1.272",
+      "evidence": "The helper's contract is a stdout JSON object of string-to-string pairs, a 10s timeout, invocation per connection, and re-invocation on a 401 or 403 response.",
+      "evidence_locator": "claude-code 2.1.272",
+      "verification_method": "manual-read",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 90,
+      "status": "verified",
+      "used_in": [
+        "02-harness-standard",
+        "04-skills-and-mcp"
+      ],
+      "note": "Re-invocation on 401 is what makes short-lived workspace OAuth tokens usable for MCP: a literal header is a token frozen at launch, and a useful session outlives it."
+    },
+    {
+      "id": "cc-sandbox-credentials-shape",
+      "claim": "In a Claude Code settings file, sandbox.credentials.files is a list of objects of the form {\"path\": ..., \"mode\": \"deny\"} and sandbox.credentials.envVars a list of {\"name\": ..., \"mode\": \"deny\"}. A mode of mask is not honoured from a project settings file.",
+      "source": "Claude Code settings and sandboxing reference, read at CLI version 2.1.272",
+      "evidence": "Both keys take a list of objects rather than a list of strings, each carrying an explicit mode; deny is the mode available to a project-scope file.",
+      "evidence_locator": "claude-code 2.1.272",
+      "verification_method": "manual-read",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 90,
+      "status": "verified",
+      "used_in": [
+        "02-harness-standard",
+        "16-security-privacy-supply-chain"
+      ],
+      "note": "Recorded as a shape because this is the one part of harness/shared/boundary.yml that the harness sandbox enforces directly, so the renderer has to emit it exactly."
+    },
+    {
+      "id": "cc-headershelper-outside-sandbox",
+      "claim": "A .mcp.json headersHelper runs as a direct child of the claude process and outside the Bash tool sandbox. From inside it, a credential path that the sandbox denies to Bash commands is readable, a workspace token can be minted, and a host absent from the sandbox network allowlist is reachable.",
+      "source": "local probe on the build machine (claude-code 2.1.272, Darwin arm64)",
+      "evidence": "A probe installed as the headersHelper reported its parent process as `claude`, read ~/.databrickscfg successfully, minted a workspace OAuth token through the CLI, and completed an HTTPS request to a host that appears on no allowlist in harness/shared/boundary.yml.",
+      "verification_method": "local-probe",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 30,
+      "status": "verified",
+      "used_in": [
+        "02-harness-standard",
+        "04-skills-and-mcp",
+        "16-security-privacy-supply-chain"
+      ],
+      "note": "The consequence runs both ways and both halves belong in the same sentence: the credential deny does not break MCP authentication, and the helper is a privileged escape hatch that has to be reviewed as code rather than filed as configuration."
+    },
+    {
+      "id": "cc-untrusted-drops-allow",
+      "claim": "A Claude Code project that has not been trusted silently discards every permissions.allow entry in its settings file. Deny rules and hooks continue to fire, so nothing becomes less safe, but every allowed action prompts and any test of the allow tier is vacuous. Trust is recorded per resolved project path in the configuration directory's .claude.json, as projects[path].hasTrustDialogAccepted.",
+      "source": "local probe on the build machine (claude-code 2.1.272, Darwin arm64)",
+      "evidence": "A scratch project run printed that the directory \"has not been trusted\" and \"Ignoring 33 permissions.allow entries\"; writing hasTrustDialogAccepted true for the resolved path in the scratch .claude.json removed both lines and loaded all three tiers.",
+      "verification_method": "local-probe",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 30,
+      "status": "verified",
+      "used_in": [
+        "02-harness-standard",
+        "05-repo-ci-and-gates",
+        "08-review-and-evidence"
+      ],
+      "note": "macOS resolves /tmp to /private/tmp, so the key has to be written for the resolved path. verify-in-sandbox.sh seeds both spellings and then asserts the warning is absent, rather than seeding it and hoping."
+    },
+    {
+      "id": "cc-config-dir-isolates",
+      "claim": "CLAUDE_CONFIG_DIR isolates a session's state completely: sessions run under it leave the user's own ~/.claude.json unmodified and add no project entry to it.",
+      "source": "local probe on the build machine (claude-code 2.1.272, Darwin arm64)",
+      "evidence": "After the verification sessions, ~/.claude.json's modification time and size were unchanged, and none of the scratch project paths appeared among its 39 project entries.",
+      "verification_method": "local-probe",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 30,
+      "status": "verified",
+      "used_in": [
+        "02-harness-standard",
+        "08-review-and-evidence"
+      ],
+      "note": "This is what makes a verification run safe to perform on a working machine. It is asserted at the end of every run rather than assumed, because a run that quietly edited the reader's configuration would be the worst possible advertisement."
+    },
+    {
+      "id": "gw-env-not-sufficient",
+      "claim": "Setting ANTHROPIC_BASE_URL and ANTHROPIC_AUTH_TOKEN does not by itself prove that a Claude Code session reached the model through the gateway. On a machine with an existing harness login the session can answer without the gateway, and the CLI layer offers no observation that distinguishes the two cases.",
+      "source": "local probe on the build machine (claude-code 2.1.272, Darwin arm64)",
+      "evidence": "A session started with the gateway environment set answered normally on a machine carrying an ambient harness login. No output the CLI produces names the endpoint that served the request, so the answer is consistent with both routes and attributes to neither.",
+      "verification_method": "local-probe",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 30,
+      "status": "verified",
+      "used_in": [
+        "02-harness-standard",
+        "03-gateway-auth-and-governance",
+        "08-review-and-evidence"
+      ],
+      "note": "The reason the gateway is proved one layer down, over HTTP, and the reason harness/evidence/verify-in-sandbox.md lists a session's own routing among the things the run deliberately does not prove."
+    },
+    {
+      "id": "gw-anthropic-route-model-calls",
+      "claim": "The Unity AI Gateway Anthropic route serves real model calls for Claude Code. A POST to /ai-gateway/anthropic/v1/messages carrying a workspace OAuth bearer token and the model name system.ai.claude-haiku-4-5 returns 200, and the identical request with an invalid bearer token returns 401.",
+      "source": "authenticated workspace probe (host redacted)",
+      "evidence": "On the verification workspace: 200 with a token minted from the named CLI profile and the request tags accepted; 401 for the same request with an Authorization header of Bearer plus a deliberately invalid token.",
+      "verification_method": "workspace-probe",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 30,
+      "status": "verified",
+      "used_in": [
+        "02-harness-standard",
+        "03-gateway-auth-and-governance",
+        "08-review-and-evidence"
+      ],
+      "note": "The negative control is the point. A 200 on its own proves that some credential worked; a 200 next to a 401 attributes the success to the credential under test."
+    },
+    {
+      "id": "gw-mcp-tools-list-measurable",
+      "claim": "The governed MCP route /ai-gateway/mcp-services/<catalog>.<schema>.<name> answers a JSON-RPC tools/list over HTTP POST with a workspace OAuth bearer token, so the context cost of a governed MCP server's tool schemas can be measured rather than estimated.",
+      "source": "authenticated workspace probe (host redacted)",
+      "evidence": "system.ai.dbsql returned 2 tools totalling 838 bytes of advertised schema, about 209 tokens. A nonexistent service name on the same route returned 403, which also shows the route authenticates before it resolves the service.",
+      "verification_method": "workspace-probe",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 30,
+      "status": "verified",
+      "used_in": [
+        "04-skills-and-mcp",
+        "12-operating-model-and-metrics"
+      ],
+      "note": "scripts/tool-budget.py --live uses this to turn the offline lower bound into a measurement, and to compare the advertised tools against the allowlist in both directions: schemas paid for and refused, and policy lines that constrain nothing."
+    },
+    {
+      "id": "ug-claude-settings-path",
+      "claim": "ug configures Claude Code by writing user-scope files: the launcher's environment block into ~/.claude/settings.json, and its own overlay including hook registrations into ~/.claude/ucode-settings.json.",
+      "source": "https://github.com/databricks/unity-gateway",
+      "evidence": "ucode/agents/claude.py module docstring: \"Claude Code agent: writes ~/.claude/settings.json env block.\"; CLAUDE_CONFIG_DIR = Path.home() / \".claude\" and CLAUDE_SETTINGS_PATH = CLAUDE_CONFIG_DIR / \"ucode-settings.json\"; smart_routing/claude_hooks.py: \"Written into ~/.claude/ucode-settings.json under Claude Code's hook events.\"",
+      "evidence_locator": "ucode/agents/claude.py in the installed build 0.1.0+84.gfddf95b",
+      "verification_method": "repo-file-read",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 90,
+      "status": "verified",
+      "used_in": [
+        "02-harness-standard",
+        "03-gateway-auth-and-governance"
+      ],
+      "note": "Correct for a person configuring their own machine and wrong for a verification run, which is why every script in harness/scripts/ runs with a scratch CLAUDE_CONFIG_DIR and never in the reader's login session."
     }
   ]
 }

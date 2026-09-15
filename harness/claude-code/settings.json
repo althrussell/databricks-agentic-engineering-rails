@@ -1,0 +1,172 @@
+{
+  "permissions": {
+    "defaultMode": "default",
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "Edit",
+      "Write",
+      "NotebookEdit",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git switch:*)",
+      "Bash(git restore:*)",
+      "Bash(git stash:*)",
+      "Bash(git worktree:*)",
+      "Bash(make check:*)",
+      "Bash(make docs:*)",
+      "Bash(make test:*)",
+      "Bash(make e2e:*)",
+      "Bash(make doctor:*)",
+      "Bash(npm run:*)",
+      "Bash(npm test:*)",
+      "Bash(npm ci:*)",
+      "Bash(pytest:*)",
+      "Bash(uv run:*)",
+      "Bash(python3 scripts/:*)",
+      "WebFetch(domain:docs.databricks.com)",
+      "WebFetch(domain:developers.databricks.com)",
+      "WebFetch(domain:code.claude.com)",
+      "mcp__databricks__get_current_user",
+      "mcp__databricks__get_table_stats_and_schema",
+      "mcp__databricks__list_compute"
+    ],
+    "ask": [
+      "Bash(git push:*)",
+      "Bash(gh pr create:*)",
+      "Bash(databricks:*)",
+      "mcp__databricks__execute_sql",
+      "mcp__databricks__manage_app"
+    ],
+    "deny": [
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(gh pr ready:*)",
+      "Bash(gh release create:*)",
+      "Bash(databricks bundle deploy:*)",
+      "Bash(databricks bundle destroy:*)",
+      "Bash(security find-generic-password:*)"
+    ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "failIfUnavailable": true,
+    "allowUnsandboxedCommands": false,
+    "autoAllowBashIfSandboxed": false,
+    "filesystem": {
+      "denyRead": [
+        "~/.databrickscfg",
+        "~/.databricks",
+        "~/.aws",
+        "~/.ssh",
+        "~/.config/gcloud",
+        "~/.netrc",
+        "~/.claude",
+        "~/.codex"
+      ]
+    },
+    "credentials": {
+      "files": [
+        {
+          "path": "~/.databrickscfg",
+          "mode": "deny"
+        },
+        {
+          "path": "~/.databricks",
+          "mode": "deny"
+        },
+        {
+          "path": "~/.aws",
+          "mode": "deny"
+        },
+        {
+          "path": "~/.ssh",
+          "mode": "deny"
+        },
+        {
+          "path": "~/.config/gcloud",
+          "mode": "deny"
+        },
+        {
+          "path": "~/.netrc",
+          "mode": "deny"
+        },
+        {
+          "path": "~/.claude",
+          "mode": "deny"
+        },
+        {
+          "path": "~/.codex",
+          "mode": "deny"
+        }
+      ],
+      "envVars": [
+        {
+          "name": "GITHUB_TOKEN",
+          "mode": "deny"
+        },
+        {
+          "name": "GH_TOKEN",
+          "mode": "deny"
+        },
+        {
+          "name": "DATABRICKS_TOKEN",
+          "mode": "deny"
+        },
+        {
+          "name": "DATABRICKS_CLIENT_SECRET",
+          "mode": "deny"
+        },
+        {
+          "name": "ANTHROPIC_API_KEY",
+          "mode": "deny"
+        },
+        {
+          "name": "NPM_TOKEN",
+          "mode": "deny"
+        }
+      ]
+    },
+    "network": {
+      "allowedDomains": [
+        "docs.databricks.com",
+        "developers.databricks.com",
+        "code.claude.com",
+        "registry.npmjs.org",
+        "pypi.org",
+        "files.pythonhosted.org",
+        "github.com",
+        "api.github.com",
+        "objects.githubusercontent.com"
+      ]
+    }
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/harness/claude-code/hooks/pretooluse-guard.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/harness/claude-code/hooks/pretooluse-guard.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -31,12 +31,17 @@ TYPST_PINNED  := $(shell sed -n '/^  typst:/,/^  [a-z_]*:/p'  template-version.y
 PANDOC_FOUND  := $(shell pandoc --version 2>/dev/null | head -1 | sed 's/^pandoc *//')
 TYPST_FOUND   := $(shell typst --version 2>/dev/null | head -1 | sed 's/^typst *//')
 
-PROFILE ?= labs
+# The Databricks CLI profile the live targets authenticate with. DEFAULT is the CLI's
+# own default, so `make harness-verify-sandbox` works on a machine that has run
+# `databricks auth login` once and nothing else. Override per invocation:
+#   make harness-verify-sandbox PROFILE=my-workspace
+PROFILE ?= DEFAULT
 RUNTIME := $(shell for c in docker podman finch nerdctl; do command -v $$c >/dev/null 2>&1 && { echo $$c; break; }; done)
 
 .PHONY: help check check-live docs docs-repro deps doctor reverify clean \
         selftest sandbox-build sandbox-shell harness-verify-sandbox \
-        harness-generate harness-verify test e2e
+        harness-generate harness-verify harness-deny-proof boundary-proof test e2e \
+        tool-budget tool-budget-live
 
 ## help: list the targets
 help:
@@ -54,10 +59,15 @@ check: selftest
 	@for f in $$(find scripts harness -name '*.sh' 2>/dev/null); do \
 	  sh -n "$$f" || exit 1; printf '  ok      %s parses\n' "$$f"; \
 	done
-	@for f in $$(find scripts -name '*.py' 2>/dev/null); do \
+	@for f in $$(find scripts harness -name '*.py' 2>/dev/null); do \
 	  $(PY) -m py_compile "$$f" || exit 1; printf '  ok      %s compiles\n' "$$f"; \
 	done
-	@rm -rf scripts/__pycache__
+	@rm -rf scripts/__pycache__ harness/scripts/__pycache__
+	@printf '\n  harness\n\n'
+	@./harness/scripts/deny-proof.sh
+	@./harness/scripts/verify.sh --quiet
+	@./harness/scripts/boundary-proof.sh --probe-check --quiet
+	@./scripts/tool-budget.py --quiet
 	@printf '\n  check passed\n\n'
 
 ## check-live: the checks that need the network or a workspace
@@ -138,6 +148,14 @@ sandbox-shell: sandbox-build
 	  -v "$(CURDIR)":/work -w /work \
 	  -p 127.0.0.1:8020:8020 daer-boundary /bin/bash
 
+## tool-budget: report what the MCP configuration costs in context
+tool-budget:
+	@./scripts/tool-budget.py
+
+## tool-budget-live: the same, but measured against the governed route (needs a workspace)
+tool-budget-live:
+	@DAER_PROFILE=$(PROFILE) ./scripts/tool-budget.py --live
+
 ## harness-verify-sandbox: authenticate and verify the harness inside the boundary
 harness-verify-sandbox:
 	@./harness/scripts/verify-in-sandbox.sh --profile $(PROFILE)
@@ -150,6 +168,22 @@ harness-generate:
 ## harness-verify: fail if a generated harness config has been hand-edited
 harness-verify:
 	@./harness/scripts/verify.sh
+
+## harness-deny-proof: run the never-automatic tier against its verdict table
+harness-deny-proof:
+	@./harness/scripts/deny-proof.sh
+
+## boundary-proof: attempt what the boundary forbids and report what refused
+# Deliberately not part of `make check`. It reports on the boundary it is inside,
+# and `make check` runs in whatever shell a developer happens to have, so a
+# pass/fail here would mean different things on different machines. `make check`
+# runs --probe-check instead, which is hermetic and only asks whether the probes
+# are still pointed at the policy.
+boundary-proof:
+	@./harness/scripts/boundary-proof.sh --expect none
+	@printf '  That was the negative control: this shell is unconfined, so the probes\n'
+	@printf '  proved they can tell the difference. For the real thing, run the same\n'
+	@printf '  script with --expect boundary inside `make sandbox-shell`.\n\n'
 
 # -------------------------------------------------------------------- tracks ---
 ## test: unit and contract tests for whichever track is present

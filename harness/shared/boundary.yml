@@ -1,0 +1,109 @@
+# boundary.yml — the execution boundary, as policy rather than as prose.
+#
+# Rendered into whatever boundary mechanism each harness actually has. Claude Code
+# has an OS-enforced Bash sandbox with filesystem, network and credential layers, so
+# for the reference harness this file renders into real enforcement. A harness with
+# no sandbox renders the container boundary instead and says so; a harness with
+# neither must not be promoted, because the pack would then be recommending an
+# agent with no boundary at all.
+#
+# Three sentences a reader should take from this file before the details:
+#
+#   * Changing HOME is not a boundary. It moves configuration; it does not isolate
+#     the filesystem, the keychain, the process table or the network.
+#   * A boundary does not solve prompt injection. It limits the blast radius of an
+#     injection that has already succeeded.
+#   * A boundary with none of the human's credentials is useless, and a boundary
+#     holding the human's credentials is not a boundary. The resolution is a
+#     credential created inside it — see docs/DECISIONS/0002-execution-boundary.md.
+
+schema_version: 1
+
+filesystem:
+  writable:
+    - repository working tree
+    - the session's own temporary directory
+  deny_read:
+    # Named here so the boundary can refuse them for every command, rather than
+    # relying on a permission rule matching the spelling of one command. The
+    # credential is not merely unused inside the boundary; it is unreadable.
+    - "~/.databrickscfg"
+    - "~/.databricks"
+    - "~/.aws"
+    - "~/.ssh"
+    - "~/.config/gcloud"
+    - "~/.netrc"
+    - "~/.claude"
+    - "~/.codex"
+  deny_read_note: >-
+    `~/.claude` and `~/.codex` are on this list for the same reason as the
+    credential files: they are the human's own harness configuration, and an agent
+    that can rewrite its own permission rules has no permission rules. This is the
+    concrete form of the rule that no script in this repository touches the human's
+    live harness configuration.
+  strip_env:
+    - GITHUB_TOKEN
+    - GH_TOKEN
+    - DATABRICKS_TOKEN
+    - DATABRICKS_CLIENT_SECRET
+    - ANTHROPIC_API_KEY
+    - NPM_TOKEN
+  strip_env_note: >-
+    Removed from the environment of sandboxed commands. A token that is present in
+    the environment is one `env` away from a log file, and the boundary is the only
+    place that can remove it without every tool cooperating.
+
+network:
+  policy: allowlist
+  allowed_domains:
+    - "${DATABRICKS_HOST_DOMAIN}"
+    - "docs.databricks.com"
+    - "developers.databricks.com"
+    - "code.claude.com"
+    - "registry.npmjs.org"
+    - "pypi.org"
+    - "files.pythonhosted.org"
+    - "github.com"
+    - "api.github.com"
+    - "objects.githubusercontent.com"
+  note: >-
+    The workspace host is a variable, never a literal. A committed allowlist that
+    names one workspace is both a leak and a file every fork has to edit before it
+    works.
+
+availability:
+  fail_if_unavailable: true
+  fail_if_unavailable_note: >-
+    The default behaviour of a missing sandbox is a warning followed by running
+    unsandboxed, which is the single most dangerous default in this whole
+    configuration: the boundary appears in the settings file, the reader believes
+    it is on, and it is not. Setting this turns a missing dependency into a
+    startup failure. On Linux and WSL2 the dependency is real — `bubblewrap` and
+    `socat` — so this setting will stop a session on a machine that has not
+    installed them, which is the intended outcome.
+
+container:
+  # The stronger boundary, for the work the OS sandbox cannot contain, and the
+  # default this pack recommends. Tracked as a gap: the image in .devcontainer/ is
+  # a verified recipe, not a verified environment, because no container runtime was
+  # available on the build machine.
+  image: .devcontainer/Dockerfile
+  run_flags:
+    - "--cap-drop ALL"
+    - "--security-opt no-new-privileges"
+    - "--read-only"
+    - "--tmpfs /tmp:rw,noexec,nosuid"
+  mounts:
+    - "the repository, and nothing else"
+  credential_rule: >-
+    Created inside the boundary by authenticating there, with the OAuth callback
+    port published to the host so the browser step can complete. The token cache
+    lives and dies with the container. Mounting the human's profile or token cache
+    is rejected outright.
+
+proof:
+  script: harness/scripts/boundary-proof.sh
+  requirement: >-
+    Each limit above is demonstrated by an attempt that is expected to fail, not
+    asserted by a line in a document. A boundary nobody has watched refuse
+    something is a configuration file, not a boundary.

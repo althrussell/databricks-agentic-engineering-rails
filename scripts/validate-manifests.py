@@ -33,6 +33,7 @@ Modes:
 from __future__ import annotations
 
 import argparse
+import ast
 import copy
 import datetime as dt
 import fnmatch
@@ -235,6 +236,55 @@ def check_claim_totals(claims: dict, rpt: Report) -> None:
         rpt.ok("claims-ledger.json", "totals agree with rows")
 
 
+# A citation is the word claim followed by an id, optionally backticked, in prose or in a
+# comment. Requiring the id to contain a hyphen is what keeps this from matching ordinary
+# English after the word "claim": every id in the ledger has one, and "claim that" or
+# "claim it makes" do not. (Deliberately no worked example here - this check scans its own
+# source like every other file, and an example would be a citation that cannot resolve.)
+CLAIM_CITATION = re.compile(r"\bclaims?\s+`?([a-z0-9]+(?:-[a-z0-9]+)+)`?")
+
+
+def check_claim_citations(claims: dict, rpt: Report) -> None:
+    """Every `claim <id>` written anywhere in the repository must name a real row.
+
+    The ledger exists so that a statement can be traced to the words that support it.
+    A file citing an id that is not in the ledger reads exactly like one citing a real
+    row: the citation is the reassurance, so an unresolvable citation is a false one. This
+    is the cheapest possible check for that, and it found four dangling ids the first time
+    it ran.
+
+    The reverse direction - a ledger row nothing cites - is deliberately not checked
+    here. `used_in` already requires each row to name a document, and those documents are
+    written in a later phase, so a "cited nowhere" check would fail forty times for a
+    reason that is a schedule rather than a defect.
+    """
+    known = {c["id"] for c in claims["claims"]}
+    files, _ = scanned_text_files()
+    dangling: dict[str, tuple[str, int]] = {}
+    cited = set()
+    for rel in files:
+        if rel == "claims-ledger.json":
+            continue
+        try:
+            with open(os.path.join(ROOT, rel), encoding="utf-8", errors="ignore") as fh:
+                for lineno, line in enumerate(fh, 1):
+                    for cid in CLAIM_CITATION.findall(line):
+                        if cid in known:
+                            cited.add(cid)
+                        elif cid not in dangling:
+                            dangling[cid] = (rel, lineno)
+        except OSError:
+            continue
+    if dangling:
+        for cid, (rel, lineno) in sorted(dangling.items())[:8]:
+            rpt.fail("claims-ledger.json",
+                     "%s:%d cites claim '%s', which is not in the ledger" % (rel, lineno, cid))
+        return
+    rpt.ok("claims-ledger.json",
+           "every claim cited in the repository resolves (%d of %d rows cited so far)"
+           % (len(cited), len(known)))
+
+
 def check_claim_expiry(claims: dict, rpt: Report, strict: bool) -> None:
     stale = []
     for row in claims["claims"]:
@@ -376,6 +426,107 @@ def check_required_paths(manifest: dict, rpt: Report) -> None:
                      "exception for %s expired on %s" % (exc["path"], expires))
 
 
+def renderer_placeholders() -> tuple[set[str], set[str], str | None]:
+    """Read PLACEHOLDERS and IMPLEMENTED out of render.py without importing it.
+
+    Parsed rather than imported because importing the renderer to check the renderer
+    means a syntax error there fails this check for the wrong reason, and because
+    render.py reads the shared policy at import time on some paths. `ast` gives the
+    two lists with no side effects.
+    """
+    path = os.path.join(ROOT, "harness", "scripts", "render.py")
+    try:
+        tree = ast.parse(open(path, encoding="utf-8").read())
+    except (OSError, SyntaxError) as exc:
+        return set(), set(), str(exc)
+    found = {}
+    for node in tree.body:
+        if not isinstance(node, ast.Assign):
+            continue
+        for target in node.targets:
+            if isinstance(target, ast.Name) and target.id in ("PLACEHOLDERS", "IMPLEMENTED"):
+                try:
+                    found[target.id] = set(ast.literal_eval(node.value))
+                except ValueError:
+                    return set(), set(), "%s is not a literal sequence" % target.id
+    if "PLACEHOLDERS" not in found:
+        return set(), set(), "no PLACEHOLDERS assignment found in harness/scripts/render.py"
+    return found["PLACEHOLDERS"], found.get("IMPLEMENTED", set()), None
+
+
+def check_placeholder_harnesses(manifest: dict, rpt: Report) -> None:
+    """A placeholder harness must hold an honest label and nothing loadable.
+
+    The interesting half is the cross-check against render.py. A directory being empty
+    of configuration and the renderer refusing to produce configuration are two halves
+    of one claim, edited in different files, and nothing else notices when they drift.
+    """
+    spec = manifest.get("harness_placeholders")
+    if not spec:
+        return
+
+    allowed = set(spec["allowed_files"])
+    floor = spec["min_bytes"]
+    root = os.path.join(ROOT, spec["root"])
+    problems = []
+
+    declared, implemented, err = renderer_placeholders()
+    if err:
+        rpt.fail("harness_placeholders",
+                 "could not read PLACEHOLDERS from harness/scripts/render.py: %s. "
+                 "Without it, the claim that these directories are unrenderable is "
+                 "unchecked." % err)
+        declared = None
+
+    for name in spec["directories"]:
+        d = os.path.join(root, name)
+        if not os.path.isdir(d):
+            problems.append("%s/%s does not exist" % (spec["root"], name))
+            continue
+
+        present = {e for e in os.listdir(d) if not e.startswith(".")}
+        # Any file that is not one of the allowed labels is the failure this check
+        # exists for: in a placeholder directory, an unexpected file is either a
+        # generated config the support matrix does not know about, or a hand-written
+        # one that will never be verified against the shared policy.
+        for extra in sorted(present - allowed):
+            problems.append(
+                "%s/%s/%s is not one of %s. A placeholder holds a label and nothing a "
+                "harness could load; if this harness is now implemented, promote it "
+                "properly (harness/PROMOTION.md) instead of leaving both descriptions "
+                "in the tree." % (spec["root"], name, extra, ", ".join(sorted(allowed))))
+
+        for want in sorted(allowed):
+            f = os.path.join(d, want)
+            if not os.path.isfile(f):
+                problems.append("%s/%s/%s is missing" % (spec["root"], name, want))
+            elif os.path.getsize(f) < floor:
+                problems.append("%s/%s/%s is %d bytes, below the %d-byte floor: a "
+                                "placeholder that says only 'coming soon' is what this "
+                                "check is for"
+                                % (spec["root"], name, want, os.path.getsize(f), floor))
+
+        if declared is not None:
+            if name not in declared:
+                problems.append(
+                    "%s is listed here as a placeholder but is not in PLACEHOLDERS in "
+                    "harness/scripts/render.py, so the renderer does not refuse it"
+                    % name)
+            if name in implemented:
+                problems.append(
+                    "%s is listed here as a placeholder and also in IMPLEMENTED in "
+                    "harness/scripts/render.py. One of the two is wrong and a reader "
+                    "will believe whichever they read first." % name)
+
+    for entry in problems:
+        rpt.fail("harness_placeholders", entry)
+    if not problems:
+        rpt.ok("harness_placeholders",
+               "%d placeholder harness(es) hold a label and no loadable configuration, "
+               "and the renderer refuses each by name"
+               % len(spec["directories"]))
+
+
 def check_quality_attributes(qa: dict, rpt: Report) -> None:
     ids = {a["id"] for a in qa["attributes"]}
     dangling = [(j["id"], t) for j in qa["critical_journeys"] for t in j["targets"] if t not in ids]
@@ -428,11 +579,44 @@ def check_toolchain_agreement(tv: dict, claims: dict, rpt: Report) -> None:
 
 SKIP_DIRS = {".git", "node_modules", ".venv", "venv", "__pycache__", "release",
              ".pytest_cache", "dist", "build", ".mypy_cache", ".ruff_cache"}
-TEXT_EXT = {".md", ".yml", ".yaml", ".json", ".py", ".sh", ".ts", ".tsx", ".js",
-            ".jsx", ".sql", ".tf", ".toml", ".cfg", ".txt", ".typ", ".html", ".css", ""}
+
+# Extensions worth reading. An extension missing from this set is a file the leak
+# check silently does not read, which is its worst failure mode: it reports a pass
+# over a file it never opened. Two entries earn a note. ".in" is here because the
+# harness templates are the source of every generated config, so a host pasted
+# into one reaches the output; ".tsv" because the guard's verdict table is data
+# that names real credential paths and was invisible to this check until it was
+# added.
+TEXT_EXT = {".md", ".yml", ".yaml", ".json", ".jsonl", ".py", ".sh", ".ts", ".tsx",
+            ".js", ".jsx", ".sql", ".tf", ".toml", ".cfg", ".conf", ".ini", ".txt",
+            ".tsv", ".csv", ".typ", ".html", ".css", ".in", ""}
 
 
-def tracked_text_files() -> list[str]:
+def scanned_text_files() -> tuple[list[str], str]:
+    """The files the leak check reads, and how they were chosen.
+
+    git decides when it can, because the question this check answers is whether
+    anything that will be committed carries an environment identifier. Asking git
+    for tracked-or-untracked-but-not-ignored paths is exactly that set: a
+    generated harness directory that is not committed yet is in scope, and the
+    scratch token cache under .harness-scratch/ is not.
+
+    The filesystem walk is the fallback and not the default, because it reads
+    build output and other people's caches and produces failures about files that
+    will never be committed. The mode is returned so the pass line can say which
+    one ran - "no match" means something different in each.
+    """
+    try:
+        out = subprocess.run(
+            ["git", "-C", ROOT, "ls-files", "--cached", "--others", "--exclude-standard"],
+            capture_output=True, text=True, timeout=30, check=True).stdout
+        rels = [line for line in out.splitlines() if line]
+        if rels:
+            return sorted(r for r in rels
+                          if os.path.splitext(r)[1].lower() in TEXT_EXT
+                          and os.path.isfile(os.path.join(ROOT, r))), "git"
+    except (OSError, subprocess.SubprocessError):
+        pass
     files = []
     for dirpath, dirnames, filenames in os.walk(ROOT):
         dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
@@ -440,14 +624,14 @@ def tracked_text_files() -> list[str]:
             ext = os.path.splitext(name)[1].lower()
             if ext in TEXT_EXT:
                 files.append(os.path.relpath(os.path.join(dirpath, name), ROOT))
-    return sorted(files)
+    return sorted(files), "filesystem walk"
 
 
 def check_forbidden(manifest: dict, rpt: Report) -> None:
     patterns = manifest.get("forbidden_patterns", [])
     if not patterns:
         return
-    files = tracked_text_files()
+    files, how = scanned_text_files()
     hits = []
     for spec in patterns:
         rx = re.compile(spec["pattern"])
@@ -465,9 +649,16 @@ def check_forbidden(manifest: dict, rpt: Report) -> None:
                 continue
     for pattern, rel, lineno in hits[:12]:
         rpt.fail("forbidden-patterns", "/%s/ found at %s:%d" % (pattern, rel, lineno))
+    if len(hits) > 12:
+        # Said out loud, because a truncated list that does not admit it is
+        # truncated reads as "twelve problems" when it is forty.
+        rpt.fail("forbidden-patterns",
+                 "%d further match(es) not listed; fix these and re-run."
+                 % (len(hits) - 12))
     if not hits:
         rpt.ok("forbidden-patterns",
-               "%d pattern(s) checked across %d files, no match" % (len(patterns), len(files)))
+               "%d pattern(s) checked across %d files (%s), no match"
+               % (len(patterns), len(files), how))
 
 
 # ---------------------------------------------------------------------------
@@ -618,6 +809,51 @@ def self_test() -> int:
             cases.append(("invalid fixture rejected on its own rule (%s): %s"
                           % (spec["must_mention"], name), rejected and on_point))
 
+    # (14) a loadable configuration file appears in a placeholder harness
+    # The failure this models is a half-finished promotion: someone writes a renderer,
+    # lands a settings.json, and leaves the STATUS.md that says the harness is not
+    # implemented. Planted in the real tree because the check reads the filesystem, and
+    # removed in a finally block whether or not the assertion holds.
+    spec = manifest.get("harness_placeholders")
+    if spec and spec.get("directories"):
+        victim = os.path.join(ROOT, spec["root"], spec["directories"][0])
+        planted = os.path.join(victim, "settings.json")
+        existed = os.path.exists(planted)
+        try:
+            if not existed:
+                with open(planted, "w", encoding="utf-8") as fh:
+                    fh.write('{"planted": "by the self-test"}\n')
+                rpt = Report()
+                check_placeholder_harnesses(manifest, rpt)
+                on_point = any("settings.json" in msg for _, _, msg in rpt.rows)
+                cases.append(("loadable config planted in a placeholder harness",
+                              rpt.failures > 0 and on_point))
+        finally:
+            if not existed and os.path.exists(planted):
+                os.remove(planted)
+
+        # (15) the directory and the renderer disagree about whether it is a placeholder
+        # Two files, edited by different people at different times, that have to say the
+        # same thing. Nothing else in the repository notices when they stop.
+        bad = copy.deepcopy(manifest)
+        bad["harness_placeholders"]["directories"] = ["claude-code"]
+        rpt = Report()
+        check_placeholder_harnesses(bad, rpt)
+        on_point = any("IMPLEMENTED" in msg for _, _, msg in rpt.rows)
+        cases.append(("placeholder list contradicts render.py", rpt.failures > 0 and on_point))
+
+    # (16) a citation that no longer resolves
+    # Planted the other way round from the rest: the file citing the claim is left alone
+    # and the row is removed, because that is how this defect actually arrives - someone
+    # retires a claim and the sentences relying on it stay behind, still citing it.
+    cited = "cc-defaultmode-project-limit"
+    bad = copy.deepcopy(claims)
+    bad["claims"] = [c for c in bad["claims"] if c["id"] != cited]
+    rpt = Report()
+    check_claim_citations(bad, rpt)
+    on_point = any(cited in msg for _, _, msg in rpt.rows)
+    cases.append(("citation to a retired claim", rpt.failures > 0 and on_point))
+
     width = max(len(name) for name, _ in cases)
     bad_cases = 0
     for name, caught in cases:
@@ -662,11 +898,13 @@ def main() -> int:
         check_document_references(readiness, sources, claims, rpt)
     if claims:
         check_claim_totals(claims, rpt)
+        check_claim_citations(claims, rpt)
         check_claim_expiry(claims, rpt, args.strict_expiry)
     if readiness:
         check_release_rows(readiness, rpt)
     if manifest:
         check_required_paths(manifest, rpt)
+        check_placeholder_harnesses(manifest, rpt)
         check_forbidden(manifest, rpt)
     if qa:
         check_quality_attributes(qa, rpt)

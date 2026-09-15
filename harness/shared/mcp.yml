@@ -1,0 +1,87 @@
+# mcp.yml — which MCP servers a project on these rails registers, and the ceiling
+# on what they may cost in context.
+#
+# Rendered per harness by harness/scripts/generate.sh.
+#
+# The governance point, first, because it decides the URL and everything else
+# follows from it. A Databricks workspace exposes its managed MCP servers directly
+# under /api/2.0/mcp/... and exposes MCP services registered in Unity Catalog under
+# /ai-gateway/mcp-services/<catalog>.<schema>.<name>. Only the second route passes
+# through Unity AI Gateway, which is what puts the call in the usage system table
+# and under a rate limit. A team that registers the direct route has working tools
+# and no governance, and nothing about the configuration will tell them so.
+#
+# Rate limits differ by service type: model services carry requests-per-minute and
+# tokens-per-minute limits, MCP services carry requests-per-minute only (claim
+# gw-ratelimit-types). Budget an MCP server by call count, not by tokens.
+
+schema_version: 1
+
+routes:
+  governed:
+    template: "{workspace}/ai-gateway/mcp-services/{uc_full_name}"
+    governed_by_gateway: true
+    why: >-
+      Passes through Unity AI Gateway, so the call appears in
+      system.ai_gateway.usage and is subject to the service's QPM limit.
+  direct_managed:
+    template: "{workspace}/api/2.0/mcp/{kind}/{path}"
+    governed_by_gateway: false
+    kinds: [functions, vector-search, genie, sql, external]
+    why: >-
+      The workspace's own managed MCP endpoints. Governed by Unity Catalog grants
+      but not by the gateway, so neither the usage table nor a gateway rate limit
+      sees the traffic.
+
+# Servers a generated project registers. `route: governed` is the default and the
+# only value that should appear without a recorded reason.
+servers:
+  - name: databricks
+    route: governed
+    uc_full_name: "${DAER_MCP_SERVICE}"
+    transport: http
+    auth: workspace-oauth
+    why: >-
+      The one server the reference application needs. Registered by Unity Catalog
+      name rather than by URL so that the same committed config points at a
+      different service in each environment.
+    tools_allowed:
+      - get_current_user
+      - get_table_stats_and_schema
+      - list_compute
+      - execute_sql
+      - manage_app
+    tools_allowed_note: >-
+      The allowlist is the tool budget's denominator. Every entry costs context in
+      every session, whether or not it is called.
+
+# What the configuration may cost before it needs a decision rather than a shrug.
+# Enforced by scripts/tool-budget.py, which reports the measured number next to
+# each ceiling and exits non-zero when one is exceeded.
+budget:
+  max_mcp_servers: 3
+  max_mcp_tools: 12
+  max_instruction_bytes: 12000
+  max_estimated_context_tokens: 8000
+  estimation_method: >-
+    Bytes divided by four. A deliberate approximation: the exact number depends on
+    the tokeniser and on what the server advertises at connect time, and the
+    purpose of the ceiling is to catch a configuration that has doubled, not to
+    price a session. The authoritative figure for a live session comes from the
+    harness itself.
+
+# Unregistered by design. Recorded because "we did not think about it" and "we
+# decided against it" look identical in a config file.
+not_registered:
+  - name: web search
+    reason: >-
+      Claude Code's built-in WebSearch declares a hosted Anthropic server tool
+      that the Databricks gateway rejects, so it wastes a turn before falling
+      back. `ug` removes it with a bare deny entry and registers a replacement
+      server; a project on these rails inherits that behaviour from `ug` rather
+      than duplicating it here.
+  - name: filesystem servers
+    reason: >-
+      The harness already has first-class file tools that the permission tiers
+      and the boundary both understand. A filesystem MCP server adds a second
+      path to the same capability, governed by neither.

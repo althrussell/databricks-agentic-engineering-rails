@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "databricks": {
+      "type": "http",
+      "url": "${DAER_WORKSPACE_HOST}/ai-gateway/mcp-services/${DAER_MCP_SERVICE}",
+      "headersHelper": "${CLAUDE_PROJECT_DIR}/harness/claude-code/hooks/mcp-auth-header.sh"
+    }
+  }
+}

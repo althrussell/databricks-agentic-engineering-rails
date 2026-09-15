@@ -121,6 +121,52 @@
           }
         }
       }
+    },
+    "harness_placeholders": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "description",
+        "root",
+        "allowed_files",
+        "min_bytes",
+        "directories"
+      ],
+      "description": "The harnesses that are labelled rather than implemented. Machine-readable so that 'this directory contains no configuration' is a checked property and not a promise in a README: the failure mode is a half-finished renderer leaving a loadable config next to a STATUS.md that still says the harness is unsupported.",
+      "properties": {
+        "description": {
+          "type": "string",
+          "minLength": 20
+        },
+        "root": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Directory the named placeholders live under."
+        },
+        "allowed_files": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "The complete set of filenames permitted in a placeholder directory. Anything else is a failure, because the point of the check is that no file here can be loaded by a harness."
+        },
+        "min_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Floor for each allowed file. A placeholder whose STATUS.md says only 'coming soon' is the thing this section exists to prevent."
+        },
+        "directories": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Each must also appear in PLACEHOLDERS in harness/scripts/render.py. The cross-check is the point: the directory's emptiness and the renderer's refusal are two halves of one claim and drift apart silently when only one is edited."
+        }
+      }
     }
   }
 }

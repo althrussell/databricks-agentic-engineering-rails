@@ -1,0 +1,126 @@
+# gateway.yml — how each harness family reaches Unity AI Gateway.
+#
+# Rendered into a per-harness launch script by harness/scripts/generate.sh.
+#
+# Two things in this file are easy to get wrong and expensive to get wrong:
+#
+#   1. A route documented for the platform is not necessarily present on a given
+#      workspace. On the workspace this pack was verified against, the Anthropic
+#      route answered 200 while the Codex route answered 404 and the Gemini route
+#      answered 400 (claim probe-gw-route-coverage). Probe; do not assume. This is
+#      why `launch.sh` checks the route before starting the harness, and why the
+#      pack has one reference harness rather than five it has never run.
+#   2. Attribution is not automatic. A session reaches the usage system table
+#      because it went through the gateway, but it becomes findable *as this
+#      team's session* only if a request tag was set (claim
+#      gw-request-tags-header). Untagged traffic is real spend with no owner.
+
+schema_version: 1
+
+# Prefer the launcher over hand-set environment variables, for one reason worth
+# stating plainly: the launcher re-checks the workspace and refreshes the token,
+# and a hand-set token expires mid-session with an error that reads like a model
+# failure. The environment block below is documented as the fallback and as the
+# explanation of what the launcher does, not as the recommended path.
+launcher:
+  command: ug
+  install: "uv tool install git+https://github.com/databricks/unity-gateway"
+  alias: ucode
+  per_harness_subcommand:
+    claude-code: "ug claude"
+    codex: "ug codex"
+    gemini: "ug gemini"
+    opencode: "ug opencode"
+    copilot-cli: "ug copilot"
+    cursor: "ug cursor"
+  refresh: "ug claude --refresh"
+  writes_user_scope_config: true
+  writes_user_scope_config_note: >-
+    `ug` writes the launcher's environment block into the user's own harness
+    configuration — for Claude Code, `~/.claude/ucode-settings.json` and the `env`
+    block of `~/.claude/settings.json` (claim ug-claude-settings-path). That is
+    correct for a person configuring their own machine and wrong for a verification
+    run, because it edits the very configuration the verification is supposed to
+    leave alone. Every script in harness/scripts/ therefore runs with a scratch
+    HOME or inside the boundary, never in the human's login session.
+
+# Values a generated launcher needs that are not themselves gateway facts. They live
+# here rather than in the generator so that harness/shared/ stays the only place a
+# reviewer has to read to know what the generated files will say.
+defaults:
+  profile: DEFAULT
+  profile_note: >-
+    The Databricks CLI's own default profile name. A reference configuration that
+    named someone's personal profile would work on one machine and confuse every
+    other reader. Override per session with DAER_PROFILE or
+    DATABRICKS_CONFIG_PROFILE.
+  project_tag: rails-reference
+  project_tag_note: >-
+    The default value of the `project` request tag. A team forks this pack and
+    changes it once; until they do, their spend is at least attributable to
+    something specific rather than to nothing.
+  journal_path: .daer/guard-journal.jsonl
+  journal_path_note: >-
+    Where a generated hook adapter records the never-automatic decisions it makes.
+    Git-ignored: it is a local audit trail of one machine's sessions, and committing
+    it would put one developer's command history in everyone's clone.
+
+families:
+  claude-code:
+    route: "/ai-gateway/anthropic"
+    probe_path: "/ai-gateway/anthropic/v1/models"
+    env:
+      ANTHROPIC_BASE_URL: "{workspace}/ai-gateway/anthropic"
+      CLAUDE_CODE_USE_GATEWAY: "1"
+    headers:
+      x-databricks-use-coding-agent-mode: "true"
+    request_tags:
+      header: "Databricks-Ai-Gateway-Request-Tags"
+      value_shape: json-object-of-strings
+      keys: [team, project, purpose]
+    model_pinning: launcher-decides
+    model_pinning_note: >-
+      ANTHROPIC_MODEL is deliberately left unset. The launcher does the same, and
+      for a reason worth copying: setting it adds a duplicate row to the harness's
+      own model picker on top of the family alias, and a raw Databricks model id is
+      rejected client-side. Pin a model for one session with the harness's own
+      flag instead.
+
+  # Documented for selection advice, not implemented. Every field here came from
+  # the gateway documentation; none of it has been exercised by this pack. See
+  # harness/PROMOTION.md for what "implemented" would require.
+  codex:
+    route: "/ai-gateway/codex/v1"
+    implemented: false
+  cursor:
+    route: "/ai-gateway/cursor/v1"
+    implemented: false
+    known_limitation: >-
+      `ug cursor` configures MCP only. Model routing for Cursor is not handled by
+      the launcher (claim ug-agents-and-cursor), so this family cannot reach parity
+      through `ug` alone.
+  gemini:
+    route: "/ai-gateway/gemini"
+    implemented: false
+  opencode:
+    route: "/ai-gateway/mlflow/v1"
+    implemented: false
+  copilot-cli:
+    route: "/ai-gateway/mlflow/v1"
+    implemented: false
+    known_limitation: >-
+      Route shared with OpenCode in the gateway documentation. Which of the two
+      routes Copilot CLI actually uses has not been verified by this pack.
+
+# What a rate limit looks like from inside a session, so a reader recognises it
+# rather than filing it as flakiness.
+limits:
+  http_status_on_limit: 429
+  client_requirement: >-
+    Back off. A retry-immediately loop against a QPM limit turns one throttled
+    session into a sustained overage and makes the dashboard unreadable for
+    everyone else on the service.
+  budgets_are_not_caps: >-
+    A gateway budget is near-real-time protection, not an invoice cap: enforcement
+    is approximate, in-flight requests are not interrupted, and spend above the
+    threshold is not refunded (claim gw-budget-not-a-cap). Size it as an alarm.
