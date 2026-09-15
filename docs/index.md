@@ -8,7 +8,7 @@ description: Standards, working code and proofs for building software with codin
 **Standards, working code and proofs for building software with coding agents on
 Databricks — to a production standard, on rails a team can actually follow.**
 
-![Scattered blocks to the left of a pair of red rails; between the rails the same blocks are aligned in a single ordered line, running up to a neat stack of translucent panels](assets/img/hero-on-rails.jpg)
+![Ten navy ceramic blocks lie scattered at random angles on an oat surface to the left of a pair of glossy lava-red rails; between the rails the same blocks form a single evenly spaced procession climbing to a stack of four smoked-glass slabs on brushed posts](assets/img/hero-on-rails.jpg)
 
 > **This site is PREVIEW, and it is mostly a table of contents for work that has
 > not been written yet.** Phase 1 of 6 is complete: the reference harness is

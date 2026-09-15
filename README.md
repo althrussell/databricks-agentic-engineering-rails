@@ -3,7 +3,7 @@
 **Standards, working code and proofs for building software with coding agents on
 Databricks — to a production standard, on rails a team can actually follow.**
 
-![Scattered blocks to the left of a pair of red rails; between the rails the same blocks are aligned in a single ordered line, running up to a neat stack of translucent panels](docs/assets/img/hero-on-rails.jpg)
+![Ten navy ceramic blocks lie scattered at random angles on an oat surface to the left of a pair of glossy lava-red rails; between the rails the same blocks form a single evenly spaced procession climbing to a stack of four smoked-glass slabs on brushed posts](docs/assets/img/hero-on-rails.jpg)
 
 Two tracks, one set of rails:
 
@@ -202,7 +202,7 @@ neither modified nor given an entry**.
 
 ### One route
 
-![Five different client shapes on the left; their threads converge through a single archway in a dark wall and resolve into a ledger of bars on the right, with one thread stopped flat against the wall](docs/assets/img/governed-gateway.jpg)
+![Six navy devices of differing shapes on the left each emit a red filament of light; five bend and converge through one narrow lit aperture in a tall navy wall and resolve into five glowing frosted bars of graduated height on a navy plinth beyond it, while the sixth strikes the blank face of the wall and stops in a scatter of sparks](docs/assets/img/governed-gateway.jpg)
 
 Every model call and every MCP call from every harness goes through one governed
 gateway route. Not because it is tidier, but because it is the only place where
@@ -253,7 +253,7 @@ that constrains nothing while reading as though it does.
 
 ### Three tiers
 
-![Three nested zones seen from above: a calm open interior holding a single cursor, a middle boundary with one half-open gate, and an unbroken outer band with a solid barrier stopping a path that tries to cross it](docs/assets/img/permission-tiers.jpg)
+![A machined circular dais of three tiers seen from a high three-quarter angle: a calm oat inner disc holding one navy pointer, a brushed-aluminium middle ring broken only by a half-open hinged gate with light spilling through it, and an outer wall of glossy lava-red lacquer forming one seamless unbroken circle, against which a navy rail arriving from outside stops dead in a hot glow and a few sparks](docs/assets/img/permission-tiers.jpg)
 
 | Tier | Intent | Enforced by |
 |---|---|---|
@@ -299,7 +299,7 @@ identical from inside and mean opposite things.
 
 ### Evidence, not adjectives
 
-![One card carrying a wax seal in front of three unsealed cards, with a line running from the seal down to a terminal window](docs/assets/img/evidence-not-promises.jpg)
+![One thick frosted-glass card bearing a raised lava-red wax seal, its face an ornamental pattern of concentric rings and radial ticks with no emblem; three thinner blank cards lean behind it out of focus, and a taut red filament runs from the base of the seal across the surface into the glowing slot of a small navy anodised enclosure](docs/assets/img/evidence-not-promises.jpg)
 
 Every factual claim about an external system has a row in
 `claims-ledger.json` naming its source, the method used to verify it, the date,
