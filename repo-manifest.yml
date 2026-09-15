@@ -84,9 +84,31 @@ required_paths:
       by copying a directory and diverging.
     phase: 1
     min_bytes: 2000
+  - path: scripts/build-docs.py
+    why: >-
+      Builds every PDF from one theme and writes the release manifest that records
+      each artifact's sha256. Without it the documents are hand-exported and their
+      checksums record which laptop was used rather than which source was built.
+    phase: 1
+    min_bytes: 4000
   - path: docs/theme/
     why: Shared PDF theme; per-document styling produces a pack that looks like a folder of files.
     phase: 1
+    min_files: 2
+  - path: docs/theme/pack.typ
+    why: >-
+      The one template every document is rendered through. Named separately from
+      docs/theme/ because a theme directory that still exists with the template
+      deleted would otherwise satisfy the requirement.
+    phase: 1
+    min_bytes: 4000
+  - path: docs/theme/theme-specimen.md
+    why: >-
+      The theme's visual test page. A theme change is reviewed by rendering this and
+      comparing two PDFs, which is the only review that catches a defect a diff of
+      the template cannot show.
+    phase: 1
+    min_bytes: 3000
   - path: .devcontainer/devcontainer.json
     why: >-
       The reproducible environment claim. Without it the pack's own instructions
@@ -240,6 +262,8 @@ forbidden_patterns:
       - docs/16-security-privacy-supply-chain.md
       - docs/02-harness-standard.md
       - docs/DECISIONS/*.md
+      # Naming the file in order to ignore it is the opposite of leaking it.
+      - .gitignore
   - pattern: "adb-[0-9]"
     reason: A workspace identifier in a committed file leaks the environment the pack was built against.
   - pattern: "dapi[0-9a-f]"

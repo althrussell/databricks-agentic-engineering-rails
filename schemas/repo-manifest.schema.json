@@ -58,6 +58,11 @@
             "type": "integer",
             "minimum": 1,
             "description": "Guards against the empty-file dodge: a path that exists but says nothing."
+          },
+          "min_files": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "For a directory: how many files with content it must hold, ignoring placeholders such as .gitkeep. Defaults to 1, so an empty directory never satisfies a required path. Raise it where a directory is only meaningful with several members, such as a theme that needs both a template and its specimen."
           }
         }
       }

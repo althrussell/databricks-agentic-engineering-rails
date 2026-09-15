@@ -6,18 +6,41 @@
   "validates": "release/release-manifest.json",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "pack_version", "built_on", "git", "toolchain", "artifacts"],
+  "required": [
+    "schema_version",
+    "pack_version",
+    "built_on",
+    "git",
+    "toolchain",
+    "artifacts"
+  ],
   "properties": {
-    "schema_version": { "const": 1 },
-    "pack_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?$" },
-    "built_on": { "type": "string", "format": "date-time" },
+    "schema_version": {
+      "const": 1
+    },
+    "pack_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?$"
+    },
+    "built_on": {
+      "type": "string",
+      "format": "date-time"
+    },
     "git": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["commit", "dirty"],
+      "required": [
+        "commit",
+        "dirty"
+      ],
       "properties": {
-        "commit": { "type": "string", "pattern": "^([0-9a-f]{40}|unknown)$" },
-        "branch": { "type": "string" },
+        "commit": {
+          "type": "string",
+          "pattern": "^([0-9a-f]{40}|unknown)$"
+        },
+        "branch": {
+          "type": "string"
+        },
         "dirty": {
           "type": "boolean",
           "description": "True when the working tree had uncommitted changes at build time. A dirty release artefact is not reproducible and the manifest says so rather than hiding it."
@@ -27,11 +50,37 @@
     "toolchain": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["pandoc", "typst"],
+      "required": [
+        "pandoc",
+        "typst",
+        "source_date_epoch",
+        "source_date_epoch_from"
+      ],
       "properties": {
-        "pandoc": { "type": "string", "minLength": 1 },
-        "typst": { "type": "string", "minLength": 1 },
-        "os": { "type": "string" }
+        "pandoc": {
+          "type": "string",
+          "minLength": 1
+        },
+        "typst": {
+          "type": "string",
+          "minLength": 1
+        },
+        "os": {
+          "type": "string"
+        },
+        "source_date_epoch": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "The timestamp stamped into the PDFs. Pinned so that the same revision produces the same bytes; without it typst records the moment of the build and every digest below changes on every run."
+        },
+        "source_date_epoch_from": {
+          "enum": [
+            "commit",
+            "environment",
+            "clock"
+          ],
+          "description": "Where that timestamp came from. `clock` means the build was not reproducible - an untracked tree - and the manifest says so rather than implying otherwise."
+        }
       }
     },
     "artifacts": {
@@ -40,13 +89,32 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["path", "sha256", "bytes"],
+        "required": [
+          "path",
+          "sha256",
+          "bytes"
+        ],
         "properties": {
-          "path": { "type": "string", "pattern": "^[^/].*\\.(pdf|md|zip|json)$" },
-          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-          "bytes": { "type": "integer", "minimum": 1 },
-          "pages": { "type": "integer", "minimum": 1 },
-          "source": { "type": "string", "minLength": 3 }
+          "path": {
+            "type": "string",
+            "pattern": "^[^/].*\\.(pdf|md|zip|json)$"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "bytes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "pages": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "source": {
+            "type": "string",
+            "minLength": 3
+          }
         }
       }
     }

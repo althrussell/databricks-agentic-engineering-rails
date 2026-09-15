@@ -312,6 +312,29 @@ def check_release_rows(readiness: dict, rpt: Report) -> None:
                          % (doc["id"], doc["path"]))
 
 
+# Names that exist to hold a directory open rather than to put anything in it.
+# Counting them would make "the directory exists" and "the directory has contents"
+# the same check, which is the hole this list closes.
+PLACEHOLDER_NAMES = {".gitkeep", ".keep", ".DS_Store", "Thumbs.db"}
+
+
+def dir_payload(path: str) -> list[str]:
+    """Every file under `path` that is not a placeholder and is not empty."""
+    out = []
+    for dirpath, dirnames, filenames in os.walk(path):
+        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
+        for name in filenames:
+            if name in PLACEHOLDER_NAMES:
+                continue
+            full = os.path.join(dirpath, name)
+            try:
+                if os.path.getsize(full) > 0:
+                    out.append(full)
+            except OSError:
+                continue
+    return out
+
+
 def check_required_paths(manifest: dict, rpt: Report) -> None:
     phase = manifest["current_phase"]
     missing, thin, pending = [], [], 0
@@ -325,7 +348,16 @@ def check_required_paths(manifest: dict, rpt: Report) -> None:
             missing.append(entry["path"])
             continue
         floor = entry.get("min_bytes")
-        if floor and os.path.isfile(path) and os.path.getsize(path) < floor:
+        if os.path.isdir(path):
+            # `mkdir docs/DECISIONS` must not satisfy "docs/DECISIONS is present".
+            # An empty directory is the directory-shaped version of a stub file, so
+            # it is held to the same standard: it has to contain something.
+            need = entry.get("min_files", 1)
+            payload = dir_payload(path)
+            if len(payload) < need:
+                thin.append("%s (directory holds %d file(s) with content, needs %d)"
+                            % (entry["path"], len(payload), need))
+        elif floor and os.path.getsize(path) < floor:
             thin.append("%s (%d < %d bytes)" % (entry["path"], os.path.getsize(path), floor))
 
     for path in missing:
@@ -486,6 +518,23 @@ def self_test() -> int:
         cases.append(("stub file below min_bytes", rpt.failures > 0))
     finally:
         os.remove(stub)
+
+    # (3b) a required directory that exists but holds nothing but a placeholder
+    hollow = os.path.join(ROOT, ".selftest-hollow")
+    os.makedirs(hollow, exist_ok=True)
+    keep = os.path.join(hollow, ".gitkeep")
+    with open(keep, "w", encoding="utf-8") as fh:
+        fh.write("")
+    try:
+        bad = copy.deepcopy(manifest)
+        bad["required_paths"].append(
+            {"path": ".selftest-hollow/", "why": "planted by the self-test", "phase": 0})
+        rpt = Report()
+        check_required_paths(bad, rpt)
+        cases.append(("required directory holding only a placeholder", rpt.failures > 0))
+    finally:
+        os.remove(keep)
+        os.rmdir(hollow)
 
     # (4) totals that disagree with the rows
     bad = copy.deepcopy(claims)

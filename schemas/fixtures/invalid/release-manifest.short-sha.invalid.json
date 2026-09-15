@@ -8,7 +8,9 @@
   },
   "toolchain": {
     "pandoc": "3.11",
-    "typst": "0.15.1"
+    "typst": "0.15.1",
+    "source_date_epoch": 1789430000,
+    "source_date_epoch_from": "commit"
   },
   "artifacts": [
     {
