@@ -130,8 +130,13 @@ sandbox-build:
 sandbox-shell: sandbox-build
 	@$(RUNTIME) run --rm -it \
 	  --cap-drop ALL --security-opt no-new-privileges \
+	  --read-only \
+	  --tmpfs /tmp:rw,noexec,nosuid,size=512m \
+	  --tmpfs /home/rails/.cache:rw,nosuid,size=1g \
+	  --tmpfs /home/rails/.config:rw,nosuid,size=64m \
+	  -e DATABRICKS_HOST \
 	  -v "$(CURDIR)":/work -w /work \
-	  -p 8020:8020 daer-boundary /bin/bash
+	  -p 127.0.0.1:8020:8020 daer-boundary /bin/bash
 
 ## harness-verify-sandbox: authenticate and verify the harness inside the boundary
 harness-verify-sandbox:

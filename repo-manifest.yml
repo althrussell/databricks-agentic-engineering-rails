@@ -78,12 +78,6 @@ required_paths:
     why: Internal links checked without the network in the PR lane; external links checked on a schedule.
     phase: 1
     min_bytes: 800
-  - path: scripts/new-project.sh
-    why: >-
-      The mechanism behind success test 2. Without it the second project starts
-      by copying a directory and diverging.
-    phase: 1
-    min_bytes: 2000
   - path: scripts/build-docs.py
     why: >-
       Builds every PDF from one theme and writes the release manifest that records
@@ -134,9 +128,11 @@ required_paths:
       One source of truth for permission tiers, tool budgets and MCP
       registration. Per-harness copies drift and the drift is invisible.
     phase: 1
+    min_files: 3
   - path: harness/claude-code/
     why: The reference harness, generated from harness/shared/ and verified end to end.
     phase: 1
+    min_files: 2
   - path: harness/PROMOTION.md
     why: >-
       The criteria a placeholder harness must meet to become supported. Without
@@ -146,8 +142,26 @@ required_paths:
   - path: docs/DECISIONS/
     why: Decision records for choices a reader would otherwise have to reverse-engineer.
     phase: 1
+    min_files: 3
 
   # ---------- Phase 2: the reference application and the off-platform track ----------
+  - path: template/
+    why: >-
+      What scripts/new-project.sh copies from. A starter with no template is a
+      fork by another name, and a fork is what success test 2 has to beat.
+    phase: 2
+    min_files: 4
+  - path: scripts/new-project.sh
+    why: >-
+      The mechanism behind success test 2. Without it the second project starts
+      by copying a directory and diverging. Phase 2 rather than Phase 1 for a
+      reason worth recording: the starter must emit a working vertical slice with
+      a real e2e test and one deliberately weak test the mutation run kills, and
+      none of that exists until Phase 2a. Shipping it earlier would generate a
+      project that cannot pass its own gates, which is the defect this pack
+      exists to prevent.
+    phase: 2
+    min_bytes: 2000
   - path: track-a-app/
     why: Track A must be runnable, not described. A standard nobody executed is a wish.
     phase: 2
@@ -264,6 +278,11 @@ forbidden_patterns:
       - docs/DECISIONS/*.md
       # Naming the file in order to ignore it is the opposite of leaking it.
       - .gitignore
+      # Same reason: the devcontainer names it to state, in the file a reader
+      # will copy, that it is deliberately not mounted. DISCLAIMER.md and the
+      # boundary decision record carry the same sentence.
+      - .devcontainer/devcontainer.json
+      - DISCLAIMER.md
   - pattern: "adb-[0-9]"
     reason: A workspace identifier in a committed file leaks the environment the pack was built against.
   - pattern: "dapi[0-9a-f]"
