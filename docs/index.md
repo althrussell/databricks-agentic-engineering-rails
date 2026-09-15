@@ -36,8 +36,9 @@ Phase 3. Until they exist, the repository itself is the material:
 | What is required, and which phase creates it? | `repo-manifest.yml` |
 | What is claimed, and on whose authority? | `claims-ledger.json` and `sources.yml` |
 
-The repository `README.md` is the full front door: audiences, the argument, the
-three ways to start, and an honest account of what is not built. Read it there.
+The full front door is the repository's own README — audiences, the argument, the
+three ways to start, and an honest account of what is not built:
+<https://github.com/althrussell/databricks-agentic-engineering-rails>
 
 ### The two tracks
 

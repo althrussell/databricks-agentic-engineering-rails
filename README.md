@@ -508,8 +508,9 @@ decision, and why that rule exists.
 
 ## Documentation site
 
-The documentation is published with plain GitHub Pages, built from `main` and
-the `/docs` folder. **No Actions, no build step, no workflow file** — the same
+**<https://althrussell.github.io/databricks-agentic-engineering-rails/>**
+
+Published with plain GitHub Pages, built from `main` and the `/docs` folder. **No Actions, no build step, no workflow file** — the same
 constraint that shaped the gate. Configuration is `docs/_config.yml`, the
 homepage is `docs/index.md`, and every page is a Markdown file that renders
 correctly in a plain text editor, on GitHub, and on the site.
@@ -520,9 +521,13 @@ output is byte-identical. PDFs are release artifacts published on a tag, not
 committed on every edit — a binary that changes on every build makes every diff
 useless.
 
-If Pages is unavailable on your fork — it needs GitHub Enterprise Cloud on a
-private repository — nothing is lost. Every document is Markdown in `docs/`, and
-`make docs` produces the PDFs.
+One thing worth knowing before you fork: **plain Pages needs the repository to
+be public**, unless you have GitHub Enterprise Cloud. This repository was private
+first, and enabling Pages returned `422 Your current plan does not support GitHub
+Pages for this repository` — a plan limit, not a configuration mistake, and not
+obvious from the error. If neither option is open to you nothing is lost: every
+document is Markdown in `docs/`, readable in place, and `make docs` produces the
+PDFs.
 
 ## What this does not do
 
