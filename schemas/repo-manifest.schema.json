@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/althrussell/databricks-agentic-engineering-rails/schemas/repo-manifest.schema.json",
+  "title": "repo-manifest.yml",
+  "description": "Validates the repository-root repo-manifest.yml. Enforced by scripts/validate-manifests.py in `make check`, which also asserts that every required path exists on disk. This is the file that stops the pack quietly shrinking: a deleted document fails the build rather than disappearing, and a path promised for a later phase stays visible as a debt rather than being forgotten.",
+  "validates": "repo-manifest.yml",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "description",
+    "current_phase",
+    "required_paths",
+    "exceptions"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "description": {
+      "type": "string",
+      "minLength": 40
+    },
+    "current_phase": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 6,
+      "description": "The highest build phase considered complete. Required paths from later phases are reported as pending rather than failing, so this manifest can be authored once, up front, as a plan the build is measured against. Raising this number turns on more required paths, which is the only way the plan tightens."
+    },
+    "required_paths": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "why"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "pattern": "^[^/][^*]*$",
+            "description": "Repository-relative. A trailing slash means directory."
+          },
+          "why": {
+            "type": "string",
+            "minLength": 20,
+            "description": "What breaks if this path is missing. A required path with no stated consequence is a preference, and preferences do not belong in a gate."
+          },
+          "phase": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 6,
+            "description": "The build phase that creates it. Paths from later phases are reported as pending rather than failing, so the manifest can be authored once up front."
+          },
+          "min_bytes": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Guards against the empty-file dodge: a path that exists but says nothing."
+          }
+        }
+      }
+    },
+    "exceptions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "reason"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 25
+          },
+          "expires_on": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+          }
+        }
+      }
+    },
+    "forbidden_patterns": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "pattern",
+          "reason"
+        ],
+        "properties": {
+          "pattern": {
+            "type": "string",
+            "minLength": 3,
+            "description": "A Python regular expression searched across every tracked text file."
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 20
+          },
+          "allow_in": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Glob paths where the pattern is legitimate, because the pack has to be able to discuss a credential file in order to tell readers not to mount one. Machine-readable on purpose: a prose exception is an exception nothing enforces."
+          }
+        }
+      }
+    }
+  }
+}

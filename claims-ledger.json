@@ -1,0 +1,436 @@
+{
+  "schema_version": 1,
+  "generated_on": "2026-09-15",
+  "purpose": "One row per load-bearing factual claim about an external system. A claim that cannot name its source and the words that source used does not belong in the pack. Rows with status verified-absent record a documented silence, which is itself a finding worth citing.",
+  "statuses": {
+    "verified": "The source states this and we read it on verified_on.",
+    "verified-absent": "We checked and the source does not state this. The absence is the claim.",
+    "expired": "Past its reverify interval. Treat every dependent statement as unsupported until rechecked."
+  },
+  "totals": {
+    "claims": 26,
+    "by_method": {
+      "web-fetch": 16,
+      "repo-file-read": 5,
+      "local-probe": 2,
+      "workspace-probe": 3
+    },
+    "by_status": {
+      "verified": 24,
+      "verified-absent": 2
+    }
+  },
+  "claims": [
+    {
+      "id": "gw-usage-table",
+      "claim": "Unity AI Gateway usage is recorded in the system table system.ai_gateway.usage.",
+      "source": "https://docs.databricks.com/aws/en/ai-gateway/usage-tracking",
+      "evidence": "The sole system table named on the page is `system.ai_gateway.usage`.",
+      "verification_method": "web-fetch",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 90,
+      "status": "verified",
+      "used_in": [
+        "03-gateway-auth-and-governance",
+        "11-admin-runbook",
+        "12-operating-model-and-metrics"
+      ]
+    },
+    {
+      "id": "gw-usage-columns",
+      "claim": "system.ai_gateway.usage exposes per-request identity, routing, token and status columns, which is what makes per-team attribution possible without instrumenting the harness.",
+      "source": "https://docs.databricks.com/aws/en/ai-gateway/usage-tracking",
+      "evidence": "Columns listed include account_id, workspace_id, request_id, invocation_id, endpoint_name, endpoint_tags, event_time, latency_ms, time_to_first_byte_ms, destination_type, destination_name, destination_model, requester, requester_type, ip_address, url, user_agent, api_type, request_tags, input_tokens, output_tokens, total_tokens, token_details, status_code, routing_information.",
+      "verification_method": "web-fetch",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 90,
+      "status": "verified",
+      "used_in": [
+        "03-gateway-auth-and-governance",
+        "11-admin-runbook",
+        "12-operating-model-and-metrics"
+      ]
+    },
+    {
+      "id": "gw-request-tags-header",
+      "claim": "Attribution tags are supplied on the request with the header Databricks-Ai-Gateway-Request-Tags, whose value is a JSON object mapping string keys to string values, and they surface in the request_tags column.",
+      "source": "https://docs.databricks.com/aws/en/ai-gateway/usage-tracking",
+      "evidence": "The header name given is `Databricks-Ai-Gateway-Request-Tags` and its value is described as \"a JSON object mapping string keys to string values\".",
+      "verification_method": "web-fetch",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 90,
+      "status": "verified",
+      "used_in": [
+        "03-gateway-auth-and-governance",
+        "10-offplatform-standard",
+        "12-operating-model-and-metrics"
+      ]
+    },
+    {
+      "id": "gw-usage-freshness-unstated",
+      "claim": "The usage table's data freshness is not stated in the documentation. Any latency figure in this pack is measured by us, not sourced.",
+      "source": "https://docs.databricks.com/aws/en/ai-gateway/usage-tracking",
+      "evidence": "No latency or freshness guarantee appears on the page. A separate note gives a dashboard refresh schedule of every 6 hours at version 0.3 or higher, which is a dashboard property, not data freshness.",
+      "verification_method": "web-fetch",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 90,
+      "status": "verified-absent",
+      "used_in": [
+        "03-gateway-auth-and-governance",
+        "11-admin-runbook"
+      ],
+      "note": "Load-bearing for lab-07: a learner who queries the table immediately after a session and sees nothing must be told this is expected, not a broken setup."
+    },
+    {
+      "id": "gw-ratelimit-types",
+      "claim": "Model services support requests-per-minute (QPM) and tokens-per-minute (TPM) limits; MCP services support QPM only.",
+      "source": "https://docs.databricks.com/aws/en/ai-gateway/rate-limits",
+      "evidence": "\"requests-per-minute (QPM) and tokens-per-minute (TPM) limits\" for model services; for MCP services, \"Token-based limits don't apply to MCP services\".",
+      "verification_method": "web-fetch",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 90,
+      "status": "verified",
+      "used_in": [
+        "03-gateway-auth-and-governance",
+        "04-skills-and-mcp",
+        "11-admin-runbook"
+      ]
+    },
+    {
+      "id": "gw-ratelimit-precedence",
+      "claim": "A user-specific limit overrides a group limit; a user in several groups is limited only when they exceed all of their groups' limits of that type; and where both a request and a token limit apply, the more restrictive is enforced.",
+      "source": "https://docs.databricks.com/aws/en/ai-gateway/rate-limits",
+      "evidence": "\"If a user belongs to both a user-specific limit and a group-specific limit, the user-specific limit is enforced\"; \"the user is rate limited if they exceed all of the QPM rate limits or all of the TPM rate limits of their user groups\"; \"the more restrictive rate limit is enforced\".",
+      "verification_method": "web-fetch",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 90,
+      "status": "verified",
+      "used_in": [
+        "03-gateway-auth-and-governance",
+        "11-admin-runbook"
+      ],
+      "note": "The multi-group rule is the counter-intuitive one and the most common admin mistake: adding a user to a second, more generous group loosens their effective limit rather than tightening it."
+    },
+    {
+      "id": "gw-ratelimit-service-global",
+      "claim": "The service-level rate limit is a global maximum for the service.",
+      "source": "https://docs.databricks.com/aws/en/ai-gateway/rate-limits",
+      "evidence": "\"The service rate limit is a global maximum\".",
+      "verification_method": "web-fetch",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 90,
+      "status": "verified",
+      "used_in": [
+        "03-gateway-auth-and-governance",
+        "11-admin-runbook"
+      ]
+    },
+    {
+      "id": "gw-ratelimit-429",
+      "claim": "Exceeding a gateway rate limit returns HTTP 429, so clients need backoff rather than retry-immediately.",
+      "source": "https://docs.databricks.com/aws/en/ai-gateway/rate-limits",
+      "evidence": "\"HTTP 429 (Too Many Requests) response\".",
+      "verification_method": "web-fetch",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 90,
+      "status": "verified",
+      "used_in": [
+        "03-gateway-auth-and-governance",
+        "10-offplatform-standard",
+        "06-testing-standard"
+      ]
+    },
+    {
+      "id": "gw-ratelimit-counts",
+      "claim": "A service supports at most 20 rate limits, of which at most 5 may be group-specific.",
+      "source": "https://docs.databricks.com/aws/en/ai-gateway/rate-limits",
+      "evidence": "\"maximum of 20 rate limits per service\"; \"maximum of 5 group-specific rate limits per service\".",
+      "verification_method": "web-fetch",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 90,
+      "status": "verified",
+      "used_in": [
+        "11-admin-runbook"
+      ],
+      "note": "This caps the design: per-team group limits do not scale past five teams on one service, so plan service-per-tier rather than group-per-team."
+    },
+    {
+      "id": "gw-budget-actions",
+      "claim": "A gateway budget threshold can either alert (email, access retained) or block (further requests prevented).",
+      "source": "https://docs.databricks.com/aws/en/ai-gateway/budgets",
+      "evidence": "Alert \"Sends an email notification to configured addresses. Users retain access to Unity Gateway.\" Block \"Prevents the user from making further requests through Unity Gateway.\"",
+      "verification_method": "web-fetch",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 90,
+      "status": "verified",
+      "used_in": [
+        "03-gateway-auth-and-governance",
+        "11-admin-runbook",
+        "12-operating-model-and-metrics"
+      ]
+    },
+    {
+      "id": "gw-budget-not-a-cap",
+      "claim": "A budget is near-real-time protection, not an invoice cap. Enforcement is approximate, in-flight requests are not interrupted, and Databricks states it is not responsible for spend above the threshold.",
+      "source": "https://docs.databricks.com/aws/en/ai-gateway/budgets",
+      "evidence": "\"Block usage thresholds are enforced approximately. Enforcement uses a near-real-time estimate of cost, so actual spend may vary above or below the configured threshold.\" \"Active requests in progress when the threshold is reached are not interrupted.\" \"Do not use this feature as a way to ensure an absolute spend cap on final billed amounts. Databricks is not responsible for costs incurred in excess of configured budget thresholds.\"",
+      "verification_method": "web-fetch",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 90,
+      "status": "verified",
+      "used_in": [
+        "03-gateway-auth-and-governance",
+        "11-admin-runbook",
+        "13-risk-register"
+      ],
+      "note": "This is the single most misread control in the governance plane. A team that believes a budget is a hard cap will size it as one and be surprised by the bill."
+    },
+    {
+      "id": "gw-budget-counts",
+      "claim": "An account supports at most 1,000 budgets; each budget supports at most four shared thresholds and 20 per-user overrides.",
+      "source": "https://docs.databricks.com/aws/en/ai-gateway/budgets",
+      "evidence": "\"Your account can have a maximum of 1,000 budgets.\" \"Each budget supports a maximum of four shared thresholds and 20 per-user overrides.\"",
+      "verification_method": "web-fetch",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 90,
+      "status": "verified",
+      "used_in": [
+        "11-admin-runbook"
+      ]
+    },
+    {
+      "id": "gw-budget-create-permission-unstated",
+      "claim": "The documentation states that account and workspace admins can view budget summaries but does not state who may create a budget.",
+      "source": "https://docs.databricks.com/aws/en/ai-gateway/budgets",
+      "evidence": "The page says \"Account and workspace admins can view\" budget summaries and does not name the create permission.",
+      "verification_method": "web-fetch",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 90,
+      "status": "verified-absent",
+      "used_in": [
+        "11-admin-runbook"
+      ],
+      "note": "The runbook must record the permission it actually needed when creating one, rather than asserting a permission name the docs do not give."
+    },
+    {
+      "id": "gw-coding-agents-supported",
+      "claim": "The gateway documents coding-agent integration for Claude Code, Codex CLI, Cursor IDE, Gemini CLI, OpenCode, GitHub Copilot CLI and Pi.",
+      "source": "https://docs.databricks.com/aws/en/ai-gateway/coding-agent-integration-model-services",
+      "evidence": "The page lists \"Claude Code\", \"Codex CLI\", \"Cursor IDE\", \"Gemini CLI\", \"OpenCode\", \"GitHub Copilot CLI\", \"Pi\".",
+      "verification_method": "web-fetch",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 90,
+      "status": "verified",
+      "used_in": [
+        "02-harness-standard",
+        "03-gateway-auth-and-governance"
+      ]
+    },
+    {
+      "id": "gw-coding-agent-routes",
+      "claim": "Each agent family has its own gateway route under /ai-gateway/ on the workspace host: anthropic for Claude Code, codex/v1 for Codex CLI, cursor/v1 for Cursor, gemini for Gemini CLI and mlflow/v1 for OpenCode and open-source models.",
+      "source": "https://docs.databricks.com/aws/en/ai-gateway/coding-agent-integration-model-services",
+      "evidence": "Paths given: \"https://<workspace-url>/ai-gateway/anthropic\", \"<workspace-url>/ai-gateway/codex/v1\", \"https://<workspace-url>/ai-gateway/cursor/v1\", \"https://<workspace-url>/ai-gateway/gemini\", \"<workspace-url>/ai-gateway/mlflow/v1\".",
+      "verification_method": "web-fetch",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 90,
+      "status": "verified",
+      "used_in": [
+        "02-harness-standard",
+        "03-gateway-auth-and-governance"
+      ],
+      "note": "Routes are exposed per workspace. A route documented here can still be absent on a given workspace — we observed exactly that (see probe-gw-route-coverage), which is why the pack teaches probing over assuming."
+    },
+    {
+      "id": "gw-claude-env",
+      "claim": "Claude Code is pointed at the gateway with ANTHROPIC_BASE_URL, an auth token, a model name and the custom header x-databricks-use-coding-agent-mode: true.",
+      "source": "https://docs.databricks.com/aws/en/ai-gateway/coding-agent-integration-model-services",
+      "evidence": "Configuration shown includes \"ANTHROPIC_BASE_URL\", \"ANTHROPIC_AUTH_TOKEN\", \"ANTHROPIC_MODEL\", \"ANTHROPIC_CUSTOM_HEADERS\": \"x-databricks-use-coding-agent-mode: true\", \"CLAUDE_CODE_USE_GATEWAY\": \"1\".",
+      "verification_method": "web-fetch",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 90,
+      "status": "verified",
+      "used_in": [
+        "02-harness-standard",
+        "03-gateway-auth-and-governance"
+      ]
+    },
+    {
+      "id": "ug-install",
+      "claim": "The Unity Gateway CLI installs with uv from its public repository and requires Python 3.12 or later.",
+      "source": "https://github.com/databricks/unity-gateway",
+      "evidence": "README: \"uv tool install git+https://github.com/databricks/unity-gateway\"; \"Python 3.12+ - install with uv\".",
+      "verification_method": "repo-file-read",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 90,
+      "status": "verified",
+      "used_in": [
+        "02-harness-standard",
+        "03-gateway-auth-and-governance"
+      ],
+      "evidence_locator": "README.md@c2e90644341b9fe4057b148d4eea535bcad7f478"
+    },
+    {
+      "id": "ug-ucode-alias",
+      "claim": "The CLI is named Unity Gateway with primary command ug; ucode remains a supported alias and existing ucode commands continue to work.",
+      "source": "https://github.com/databricks/unity-gateway",
+      "evidence": "README: \"Existing `ucode` commands continue to work unchanged. Going forward, the CLI is named Unity Gateway and its primary command is `ug`; `ucode` remains a supported alias.\"",
+      "verification_method": "repo-file-read",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 90,
+      "status": "verified",
+      "used_in": [
+        "02-harness-standard",
+        "03-gateway-auth-and-governance"
+      ],
+      "evidence_locator": "README.md@c2e90644341b9fe4057b148d4eea535bcad7f478"
+    },
+    {
+      "id": "ug-agents-and-cursor",
+      "claim": "ug launches Codex, Claude Code, Gemini CLI, OpenCode, GitHub Copilot CLI and Pi; Cursor is supported for MCP only, not model routing.",
+      "source": "https://github.com/databricks/unity-gateway",
+      "evidence": "README: \"a lightweight launcher for running Codex, Claude Code, Gemini CLI, OpenCode, GitHub Copilot CLI, and Pi through Databricks\"; \"ug cursor   # Cursor Agent (MCP only - see below)\".",
+      "verification_method": "repo-file-read",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 90,
+      "status": "verified",
+      "used_in": [
+        "02-harness-standard",
+        "04-skills-and-mcp"
+      ],
+      "evidence_locator": "README.md@c2e90644341b9fe4057b148d4eea535bcad7f478",
+      "note": "This asymmetry is why the harness matrix has an implementation-status column: Cursor cannot reach parity through ug alone."
+    },
+    {
+      "id": "ug-refresh",
+      "claim": "ug re-checks the workspace and updates model configuration on demand with `ug claude --refresh` or `ug codex --refresh`.",
+      "source": "https://github.com/databricks/unity-gateway",
+      "evidence": "README: \"Use `ug claude --refresh` or `ug codex --refresh` when you want to re-check Databricks and update the model/configuration.\"",
+      "verification_method": "repo-file-read",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 90,
+      "status": "verified",
+      "used_in": [
+        "02-harness-standard",
+        "03-gateway-auth-and-governance"
+      ],
+      "evidence_locator": "README.md@c2e90644341b9fe4057b148d4eea535bcad7f478"
+    },
+    {
+      "id": "ug-version-format",
+      "claim": "ug --version reports a commit-qualified version between releases, of the form 0.1.0+14.g93986a8, and the trailing g<hash> identifies the exact build commit.",
+      "source": "https://github.com/databricks/unity-gateway",
+      "evidence": "README: \"Between releases this looks like `0.1.0+14.g93986a8` - the trailing `g<hash>` is the exact commit the build came from, so include it when reporting a bug.\"",
+      "verification_method": "repo-file-read",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 90,
+      "status": "verified",
+      "used_in": [
+        "02-harness-standard"
+      ],
+      "evidence_locator": "README.md@c2e90644341b9fe4057b148d4eea535bcad7f478",
+      "note": "doctor.sh records this string verbatim: a bare '0.1.0' in a bug report is ambiguous across dozens of builds."
+    },
+    {
+      "id": "local-toolchain",
+      "claim": "Tool versions verified on the build machine, used as the floor in scripts/doctor.sh.",
+      "source": "local shell probe",
+      "evidence": "databricks CLI v1.1.0; ug 0.1.0 (ucode alias present); gh 2.92.0; Node v24.15.0; uv 0.11.15; Python 3.12.8; pandoc 3.11; typst 0.15.1; OpenTofu v1.12.6.",
+      "verification_method": "local-probe",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 30,
+      "status": "verified",
+      "used_in": [
+        "02-harness-standard",
+        "05-repo-ci-and-gates"
+      ],
+      "note": "Local probes are evidence about this machine only. doctor.sh must re-derive them on the reader's machine rather than trusting this row."
+    },
+    {
+      "id": "iac-tool-choice",
+      "claim": "OpenTofu is the IaC binary this pack verifies against, chosen over Terraform because a publicly forkable repository should not depend on a BUSL-licensed binary. The configuration is written to the Databricks provider and is expected to work with Terraform, but only OpenTofu was exercised.",
+      "source": "local shell probe",
+      "evidence": "OpenTofu v1.12.6 installed and used for fmt/validate. Terraform was not installed and not tested.",
+      "verification_method": "local-probe",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 90,
+      "status": "verified",
+      "used_in": [
+        "11-admin-runbook",
+        "PORTABILITY"
+      ],
+      "note": "Stated as a limitation, not as parity. PORTABILITY.md carries a NOT VERIFIED cell for Terraform."
+    },
+    {
+      "id": "probe-gw-route-coverage",
+      "claim": "Gateway route availability is per workspace and must be probed, not assumed. On the verification workspace the Anthropic route returned 200 while the Codex route returned 404 and the Gemini route returned 400.",
+      "source": "authenticated workspace probe (host redacted)",
+      "evidence": "GET /ai-gateway/anthropic/v1/models -> 200; the Codex route -> 404; the Gemini route -> 400, using an OAuth token from the named CLI profile.",
+      "verification_method": "workspace-probe",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 30,
+      "status": "verified",
+      "used_in": [
+        "02-harness-standard",
+        "03-gateway-auth-and-governance"
+      ],
+      "note": "Independent justification for `ug configure --skip-unavailable` and for making Claude Code the reference harness on this workspace."
+    },
+    {
+      "id": "probe-entitlements",
+      "claim": "The verification workspace has the entitlements the reference application needs: Databricks Apps enabled, SQL warehouses available, the Lakeflow pipelines API reachable, a Lakebase database instance present, Lakeview dashboards present and Unity Catalog catalogs visible.",
+      "source": "authenticated workspace probe (host redacted)",
+      "evidence": "apps list exit 0 with deployed apps present; 2 SQL warehouses; list-pipelines exit 0 with zero pipelines existing; list-database-instances returns one instance; 4 Lakeview dashboards; 11 catalogs.",
+      "verification_method": "workspace-probe",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 30,
+      "status": "verified",
+      "used_in": [
+        "09-apps-production-standard",
+        "PREREQUISITES"
+      ],
+      "note": "Pipeline creation rights were not exercised, only the list API. Recorded as reachable, not as writable."
+    },
+    {
+      "id": "probe-system-schemas",
+      "claim": "system.ai_gateway exists on the verification workspace with the tables external_model_spend and usage, alongside the access, billing, lakeflow, serving and query system schemas.",
+      "source": "authenticated workspace probe (host redacted)",
+      "evidence": "Unity Catalog listing of the system catalog returned schemas access, ai, ai_gateway, alert, billing, compute, information_schema, lakeflow, mlflow, query, serving, sharing, storage; system.ai_gateway contains external_model_spend and usage.",
+      "verification_method": "workspace-probe",
+      "verified_on": "2026-09-15",
+      "verified_by": "building-agent",
+      "reverify_interval_days": 30,
+      "status": "verified",
+      "used_in": [
+        "11-admin-runbook",
+        "12-operating-model-and-metrics"
+      ],
+      "note": "Listing proves existence, not queryability: no SELECT was executed, because that needs a running warehouse. lab-07 is what proves the query path."
+    }
+  ]
+}

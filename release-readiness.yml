@@ -1,0 +1,265 @@
+# release-readiness.yml — the traceability spine.
+#
+# Every success test the pack claims about itself lives here, with what
+# implements it, what checks it, who owns it, the exact revision the recorded
+# result came from, and the result. `make check` validates this file against
+# schemas/release-readiness.schema.json and additionally rejects any `passed`
+# row whose revision_tested is not the current HEAD.
+#
+# Read the result column literally. `not-run` is not a soft pass, and no row is
+# marked `passed` because the thing it describes looks likely to work.
+
+schema_version: 1
+pack_version: 0.1.0-preview
+release_status: PREVIEW
+
+status_definitions:
+  PREVIEW: >-
+    Honestly incomplete. Workspace, admin or human-validation rows may be
+    not-run, provided each one names the missing authority and the next action.
+    A PREVIEW may not be advertised as production-ready and may not be used to
+    claim the success test is met.
+  RELEASE-READY: >-
+    All four success tests passed against this release candidate. The workspace
+    deployment, the real end-to-end path and the admin-plane proof are not
+    not-run, and the human validations were performed by representative users
+    rather than by the authoring agent, with identifiers redacted.
+
+result_definitions:
+  passed: >-
+    Run against revision_tested, by verified_by, with the evidence listed. Both
+    the revision and the evidence are required for this value.
+  failed: Run and did not meet the stated bar. notes says what failed.
+  not-run: >-
+    Not attempted against this revision. notes says who has the authority or
+    access it needs and what the next action is.
+  expired: >-
+    Passed against an older revision and not re-run since. Treated as unproven,
+    not as a pass.
+
+# The canonical document id list. sources.yml `supports` and
+# claims-ledger.json `used_in` are both cross-checked against these ids, so a
+# citation pointing at a document that does not exist fails the build.
+documents:
+  - id: 00-recommendations-and-practices
+    title: "Recommendations and Practices — the standalone digest"
+    path: docs/00-recommendations-and-practices.md
+    status: planned
+    pdf: true
+    standalone: true
+  - id: 01-field-guide
+    title: "Field Guide to Production Agentic Engineering on Databricks"
+    path: docs/01-field-guide.md
+    status: planned
+    pdf: true
+    standalone: true
+  - id: 02-harness-standard
+    title: "IDE and Harness Standard"
+    path: docs/02-harness-standard.md
+    status: planned
+    pdf: true
+  - id: 03-gateway-auth-and-governance
+    title: "Authentication and Governance with Unity AI Gateway"
+    path: docs/03-gateway-auth-and-governance.md
+    status: planned
+    pdf: true
+  - id: 04-skills-and-mcp
+    title: "Skills and MCP — when each, and how to govern both"
+    path: docs/04-skills-and-mcp.md
+    status: planned
+    pdf: true
+  - id: 05-repo-ci-and-gates
+    title: "Repository, CI and Gates"
+    path: docs/05-repo-ci-and-gates.md
+    status: planned
+    pdf: true
+  - id: 06-testing-standard
+    title: "Testing Standard — real tests, real end-to-end"
+    path: docs/06-testing-standard.md
+    status: planned
+    pdf: true
+    standalone: true
+  - id: 07-documentation-standard
+    title: "Documentation Standard — docs as a tested artifact"
+    path: docs/07-documentation-standard.md
+    status: planned
+    pdf: true
+  - id: 08-review-and-evidence
+    title: "Review and Evidence — reviewing work you did not type"
+    path: docs/08-review-and-evidence.md
+    status: planned
+    pdf: true
+    standalone: true
+  - id: 09-apps-production-standard
+    title: "Databricks Apps to a Production Standard (Track A)"
+    path: docs/09-apps-production-standard.md
+    status: planned
+    pdf: true
+  - id: 10-offplatform-standard
+    title: "Off-Platform Engineering with Databricks-Hosted Models (Track B)"
+    path: docs/10-offplatform-standard.md
+    status: planned
+    pdf: true
+  - id: 11-admin-runbook
+    title: "Platform Admin Runbook"
+    path: docs/11-admin-runbook.md
+    status: planned
+    pdf: true
+  - id: 12-operating-model-and-metrics
+    title: "Operating Model and Metrics"
+    path: docs/12-operating-model-and-metrics.md
+    status: planned
+    pdf: true
+    standalone: true
+  - id: 13-risk-register
+    title: "Risk Register and Threat Model"
+    path: docs/13-risk-register.md
+    status: planned
+    pdf: true
+  - id: 14-adoption-ladder
+    title: "Adoption Ladder — zero, capable, compounding"
+    path: docs/14-adoption-ladder.md
+    status: planned
+    pdf: true
+    standalone: true
+  - id: 15-production-readiness
+    title: "Production Readiness — SLOs, performance, resilience, recovery"
+    path: docs/15-production-readiness.md
+    status: planned
+    pdf: true
+  - id: 16-security-privacy-supply-chain
+    title: "Security, Privacy and Supply Chain"
+    path: docs/16-security-privacy-supply-chain.md
+    status: planned
+    pdf: true
+  - id: PREREQUISITES
+    title: "Prerequisites — entitlements, previews and regions"
+    path: docs/PREREQUISITES.md
+    status: planned
+    pdf: false
+  - id: PORTABILITY
+    title: "Portability — verified scope, not aspiration"
+    path: docs/PORTABILITY.md
+    status: planned
+    pdf: false
+  - id: GLOSSARY
+    title: "Glossary"
+    path: docs/GLOSSARY.md
+    status: planned
+    pdf: false
+  - id: reference-card
+    title: "Reference Card — two printable pages"
+    path: docs/reference-card.md
+    status: planned
+    pdf: true
+    standalone: true
+
+success_tests:
+  - id: st-1
+    statement: >-
+      A team of five engineers who have never used a coding agent seriously can
+      read the Field Guide, spend the core day on labs 00-05, and end that day
+      with a governed harness, a passing CI pipeline, and one small change
+      shipped to a Databricks App with real evidence attached to the PR.
+    closed_by: humans
+    artifact: "docs/01-field-guide.md plus labs/lab-00-doctor through labs/lab-05, and track-a-app/"
+    automated_checks:
+      - lab-completion-checks
+      - pr-lane
+      - app-deploy-smoke
+    human_validation: validation/protocols/p1-core-day-cohort.md
+    evidence: []
+    owner: pack-maintainer
+    revision_tested: none
+    result: not-run
+    notes: >-
+      Needs five engineers who have not seen the material, a workspace they can
+      deploy to, and a facilitator who does not answer questions the documents
+      should answer. The build cannot recruit them. Next action: run protocol
+      p1 with a real cohort and paste the observation sheets into
+      validation/observation-sheets/.
+
+  - id: st-2
+    statement: >-
+      A second project generated with scripts/new-project.sh reaches the defined
+      productive checkpoint in under an hour with no further reading: harness
+      launched through the gateway, one scoped change made, the PR lane green,
+      an evidence record attached.
+    closed_by: humans
+    artifact: "scripts/new-project.sh and the starter-check CI job that runs the generated project's own `make check`"
+    automated_checks:
+      - starter-check
+    human_validation: validation/protocols/p2-second-project-timed.md
+    evidence: []
+    owner: pack-maintainer
+    revision_tested: none
+    result: not-run
+    notes: >-
+      starter-check proves the generated project is internally sound; it cannot
+      prove a person reaches the checkpoint in under an hour. That needs one
+      timed run by someone who did not write the generator. Next action: run
+      protocol p2 and record the wall-clock time and every point the runner had
+      to look something up.
+
+  - id: st-3
+    statement: >-
+      A platform admin who did not author the runbook can stand up the
+      governance plane - budgets, rate limits, model services, MCP services,
+      policies, dashboards - from the admin track in under a day, and see
+      per-team spend and per-tool usage the same afternoon.
+    closed_by: humans
+    artifact: "docs/11-admin-runbook.md, admin/terraform/, admin/scripts/, admin/dashboards/, admin/sql/"
+    automated_checks:
+      - tofu-fmt-validate
+      - admin-script-idempotence
+    human_validation: validation/protocols/p3-admin-plane-walkthrough.md
+    evidence: []
+    owner: pack-maintainer
+    revision_tested: none
+    result: not-run
+    notes: >-
+      Account-level tasks are outside a workspace admin's reach and are marked
+      as such in the runbook. The same-afternoon visibility claim also depends
+      on usage-table freshness, which the documentation does not state
+      (claims-ledger: gw-usage-freshness-unstated) and which this protocol is
+      what actually measures. Next action: run protocol p3 with an admin who has
+      not read the drafts.
+
+  - id: st-4
+    statement: >-
+      A reader who will never clone the repository, run a lab or deploy a
+      Databricks App can forward one PDF to their team and apply its standards
+      to their own codebase the same week, with no dependency on anything this
+      pack builds.
+    closed_by: humans
+    artifact: "docs/00-recommendations-and-practices.md, built as a standalone PDF with no repository cross-references"
+    automated_checks:
+      - standalone-digest-check
+    human_validation: validation/protocols/p4-standalone-reader.md
+    evidence: []
+    owner: pack-maintainer
+    revision_tested: none
+    result: not-run
+    notes: >-
+      standalone-digest-check enforces the mechanical part - no links into the
+      repository, no instruction that requires a clone. Whether the advice is
+      actionable on someone else's codebase is a judgement only that reader can
+      make. Next action: send the digest PDF to one team outside this workspace
+      and collect protocol p4.
+
+known_gaps:
+  - id: g-container-runtime
+    gap: >-
+      No container runtime is installed on the build machine, so the isolated
+      execution boundary for harness verification is a scratch HOME rather than
+      a disposable container.
+    impact: >-
+      The harness proof is honest about what it isolates - configuration and
+      credentials - but it does not isolate the filesystem or the network, so it
+      is not the boundary the security document recommends for untrusted work.
+    owner: pack-maintainer
+    next_action: >-
+      Install a rootless runtime and re-run the harness verification inside it,
+      or keep the scratch HOME and publish the residual risks in
+      docs/16-security-privacy-supply-chain.md with this gap referenced.
+    tracked_as: docs/DECISIONS/0002-execution-boundary.md

@@ -1,0 +1,84 @@
+# template-version.yml — which rails this is, and what they were actually run
+# against.
+#
+# scripts/new-project.sh copies this file into every generated project, with
+# upstream.commit filled in, so a project six months old can answer where it came
+# from without archaeology.
+#
+# `verified_against` is a record, not a requirement. `verified` means the pack was
+# exercised with that version on that platform. `expected` means the code is
+# written to it and it should work but was not run. `not-verified` means nobody
+# tried. An absent key means untested, never unsupported: the honest answer to
+# "does this work on X" is often "we do not know", and this file is allowed to
+# say so.
+
+schema_version: 1
+template_name: databricks-agentic-engineering-rails
+version: 0.1.0-preview
+released_on: "2026-09-15"
+
+upstream:
+  repository: https://github.com/althrussell/databricks-agentic-engineering-rails
+
+verified_against:
+  os:
+    version: "macOS 15 (Darwin 25.6.0, arm64)"
+    status: verified
+  databricks_cli:
+    version: "1.1.0"
+    status: verified
+  unity_gateway_cli:
+    version: "0.1.0"
+    status: verified
+    note: >-
+      The ucode alias is present on this build. Record the full commit-qualified
+      string from `ug --version` in any bug report, since 0.1.0 alone spans many
+      builds.
+  gh:
+    version: "2.92.0"
+    status: verified
+  node:
+    version: "24.15.0"
+    status: verified
+    note: >-
+      AppKit requires Node 22 or newer. 24.15.0 is what the build used; 22 is the
+      floor stated in the documentation and was not separately exercised here.
+  python:
+    version: "3.12.8"
+    status: verified
+    note: >-
+      3.12 is the floor because the Unity Gateway CLI requires 3.12 or later.
+      Earlier versions are not supported by that dependency, not merely
+      untested.
+  uv:
+    version: "0.11.15"
+    status: verified
+  pandoc:
+    version: "3.11"
+    status: verified
+  typst:
+    version: "0.15.1"
+    status: verified
+  opentofu:
+    version: "1.12.6"
+    status: verified
+  terraform:
+    version: "not installed"
+    status: not-verified
+    note: >-
+      The admin configuration is written to the Databricks provider and is
+      expected to work under Terraform, but only OpenTofu was exercised.
+      OpenTofu was chosen because a publicly forkable repository should not
+      require a BUSL-licensed binary. Treat Terraform compatibility as untested
+      rather than as parity.
+  container_runtime:
+    version: "none"
+    status: not-verified
+    note: >-
+      No container runtime was available on the build machine, so the harness
+      verification ran in an isolated scratch HOME rather than a disposable
+      container. That isolates configuration and credentials but not the
+      filesystem or the network. Tracked as g-container-runtime in
+      release-readiness.yml.
+
+breaking_changes: []

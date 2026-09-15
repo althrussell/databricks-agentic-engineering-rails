@@ -1,0 +1,246 @@
+# repo-manifest.yml — the paths this repository promises to contain, and why.
+#
+# `make check` fails when a required path for a completed phase is missing or
+# emptier than its min_bytes. Paths belonging to later phases are reported as
+# pending: this file is the whole plan written down once, so that scope which
+# quietly disappears shows up as a failure instead of as a shorter README.
+#
+# Raise current_phase only when the phase's gate condition in the build brief has
+# actually been met. Raising it is what turns the next set of promises into
+# enforced ones.
+
+schema_version: 1
+current_phase: 0
+
+description: >-
+  Required paths for the databricks-agentic-engineering-rails pack, annotated
+  with the build phase that creates each one and what breaks in its absence.
+
+required_paths:
+  # ---------- Phase 0: verification and provenance ----------
+  - path: sources.yml
+    why: >-
+      Without it there is no way to tell a live source from a stale one, and
+      every platform claim in the pack becomes unfalsifiable.
+    phase: 0
+    min_bytes: 2000
+  - path: claims-ledger.json
+    why: >-
+      The only place a reader can check what a source actually said. A pack that
+      makes claims about someone else's platform without this is asking to be
+      trusted rather than checked.
+    phase: 0
+    min_bytes: 4000
+  - path: schemas/
+    why: The single home for every committed schema; scattered schemas go unenforced.
+    phase: 0
+  - path: schemas/README.md
+    why: States which file each schema validates and which check runs it, so no schema sits present but unenforced.
+    phase: 0
+    min_bytes: 800
+  - path: release-readiness.yml
+    why: >-
+      The traceability spine from success test to evidence. Without it the
+      release status is a claim in prose that nothing checks.
+    phase: 0
+    min_bytes: 3000
+  - path: repo-manifest.yml
+    why: This file. Its absence is how scope shrinks unnoticed.
+    phase: 0
+    min_bytes: 1000
+  - path: quality-attributes.yml
+    why: The measurable non-functional contract. Without it "production standard" is an adjective.
+    phase: 0
+    min_bytes: 3000
+  - path: template-version.yml
+    why: >-
+      Lets a generated project answer which rails it came from and which tool
+      versions those rails were exercised against.
+    phase: 0
+    min_bytes: 800
+
+  # ---------- Phase 1: toolchain, build, boundary, reference harness ----------
+  - path: Makefile
+    why: The single entry point. Two ways to run the checks means one of them rots.
+    phase: 1
+    min_bytes: 1500
+  - path: scripts/validate-manifests.py
+    why: Executes every schema in schemas/ plus the cross-reference checks between manifests.
+    phase: 1
+    min_bytes: 3000
+  - path: scripts/doctor.sh
+    why: >-
+      Turns "it works on my machine" into a table a reader can act on. First
+      thing lab 00 runs and the first thing a bug report should include.
+    phase: 1
+    min_bytes: 1500
+  - path: scripts/link-check.sh
+    why: Internal links checked without the network in the PR lane; external links checked on a schedule.
+    phase: 1
+    min_bytes: 800
+  - path: scripts/new-project.sh
+    why: >-
+      The mechanism behind success test 2. Without it the second project starts
+      by copying a directory and diverging.
+    phase: 1
+    min_bytes: 2000
+  - path: docs/theme/
+    why: Shared PDF theme; per-document styling produces a pack that looks like a folder of files.
+    phase: 1
+  - path: .devcontainer/devcontainer.json
+    why: >-
+      The reproducible environment claim. Without it the pack's own instructions
+      are only tested against one laptop.
+    phase: 1
+    min_bytes: 500
+  - path: .gitignore
+    why: Keeps credentials, build output and harness state out of the history. Cheap to add, expensive to add late.
+    phase: 1
+    min_bytes: 200
+  - path: LICENSE
+    why: A public repository with no licence grants nothing and cannot be adopted.
+    phase: 1
+  - path: NOTICE
+    why: Third-party attribution for what is vendored or depended on.
+    phase: 1
+  - path: DISCLAIMER.md
+    why: States plainly that this is not official Databricks documentation and what its verification actually covers.
+    phase: 1
+    min_bytes: 400
+  - path: harness/shared/
+    why: >-
+      One source of truth for permission tiers, tool budgets and MCP
+      registration. Per-harness copies drift and the drift is invisible.
+    phase: 1
+  - path: harness/claude-code/
+    why: The reference harness, generated from harness/shared/ and verified end to end.
+    phase: 1
+  - path: harness/PROMOTION.md
+    why: >-
+      The criteria a placeholder harness must meet to become supported. Without
+      it "coming soon" never resolves and the matrix quietly misleads.
+    phase: 1
+    min_bytes: 1200
+  - path: docs/DECISIONS/
+    why: Decision records for choices a reader would otherwise have to reverse-engineer.
+    phase: 1
+
+  # ---------- Phase 2: the reference application and the off-platform track ----------
+  - path: track-a-app/
+    why: Track A must be runnable, not described. A standard nobody executed is a wish.
+    phase: 2
+  - path: track-a-app/app.yaml
+    why: The Databricks Apps entry point; without it nothing deploys.
+    phase: 2
+  - path: track-a-app/tests/e2e/
+    why: >-
+      The pack's central claim is real end-to-end tests rather than stubs. This
+      directory is where that claim is either true or not.
+    phase: 2
+  - path: track-a-app/tests/security/
+    why: Scope isolation is the one target with no exception path; it needs a test that runs.
+    phase: 2
+  - path: track-b-service/
+    why: >-
+      Half the audience never deploys a Databricks App. Track B is what makes
+      the pack useful to them.
+    phase: 2
+  - path: databricks.yml
+    why: Bundle definition with named targets; ad-hoc deployment is not a rail.
+    phase: 2
+  - path: skills/
+    why: The reusable knowledge layer, in the form the harnesses actually load.
+    phase: 2
+
+  # ---------- Phase 3: documents ----------
+  - path: docs/00-recommendations-and-practices.md
+    why: >-
+      The mechanism behind success test 4. It must stand alone; a digest that
+      needs the repository is not a digest.
+    phase: 3
+    min_bytes: 12000
+  - path: docs/01-field-guide.md
+    why: The flagship document and the entry point for success test 1.
+    phase: 3
+    min_bytes: 20000
+  - path: docs/PORTABILITY.md
+    why: >-
+      States what was actually verified and on what. Its absence is how a pack
+      implies coverage it never tested.
+    phase: 3
+    min_bytes: 1500
+  - path: docs/PREREQUISITES.md
+    why: Entitlements, previews and regions, so a reader learns on day zero what they cannot do.
+    phase: 3
+    min_bytes: 1500
+  - path: docs/reference-card.md
+    why: Two printable pages that work with no repository and no network.
+    phase: 3
+    min_bytes: 2000
+  - path: release/
+    why: Built PDFs and the release manifest that ties them to a commit and a toolchain.
+    phase: 3
+
+  # ---------- Phase 4: labs ----------
+  - path: labs/
+    why: The guided path. Documents alone have never taken a team from zero to capable.
+    phase: 4
+  - path: labs/lab-00-doctor/README.md
+    why: The first thing a learner runs; if it is wrong, nothing after it is trusted.
+    phase: 4
+    min_bytes: 1000
+
+  # ---------- Phase 5: the validation kit ----------
+  - path: validation/protocols/
+    why: >-
+      Three of four success tests are closed by people. Without written
+      protocols they are closed by opinion instead.
+    phase: 5
+  - path: validation/observation-sheets/
+    why: Where the evidence from a real cohort lands, with identifiers redacted.
+    phase: 5
+  - path: validation/scorecards/
+    why: Turns observations into a pass or fail against a stated bar.
+    phase: 5
+
+  # ---------- Phase 6: CI and handover ----------
+  - path: .github/workflows/
+    why: >-
+      Gates that exist only as documentation are advice. This is where the
+      standard becomes enforcement.
+    phase: 6
+  - path: CHANGELOG.md
+    why: An adopter needs to know what changed between the version they took and the current one.
+    phase: 6
+  - path: README.md
+    why: The front door, and the only page most visitors read.
+    phase: 6
+    min_bytes: 3000
+
+exceptions:
+  - path: track-a-app/dashboard/
+    reason: >-
+      Present as a directory from Phase 0 for layout clarity, but its contents
+      are exported Lakeview JSON that cannot be authored offline. Populated in
+      Phase 2 and checked by the bundle validation job, not by a path check.
+  - path: docs/assets/
+    reason: >-
+      Diagram sources are committed as SVG, but the directory is deliberately
+      allowed to be empty until Phase 3 so that an early build does not fail on
+      a missing picture.
+
+forbidden_patterns:
+  - pattern: "databrickscfg"
+    reason: >-
+      No credential file, and no instruction to mount one, may appear in the
+      repository. The execution boundary depends on authenticating inside the
+      boundary rather than importing the human's tokens.
+    allow_in:
+      - repo-manifest.yml
+      - docs/16-security-privacy-supply-chain.md
+      - docs/02-harness-standard.md
+      - docs/DECISIONS/*.md
+  - pattern: "adb-[0-9]"
+    reason: A workspace identifier in a committed file leaks the environment the pack was built against.
+  - pattern: "dapi[0-9a-f]"
+    reason: The shape of a personal access token. Nothing that looks like one belongs in the history.

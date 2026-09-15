@@ -1,0 +1,19 @@
+{
+  "_comment": "What each invalid fixture is for. The self-test requires every fixture to be rejected AND to be rejected for the stated reason: `must_mention` is matched against the schema error path and message. Without that second half, a fixture can start failing for an unrelated reason - a typo, a renamed key - and quietly stop testing the rule it was written for.",
+  "fixtures": [
+    {
+      "file": "release-manifest.short-sha.invalid.json",
+      "schema": "release-manifest.schema.json",
+      "rule": "artifacts[].sha256 must be a full 64-character digest",
+      "must_mention": "sha256",
+      "why_it_matters": "A truncated digest cannot identify an artifact, so accepting one gives false provenance."
+    },
+    {
+      "file": "release-manifest.no-dirty-flag.invalid.json",
+      "schema": "release-manifest.schema.json",
+      "rule": "git.dirty is required",
+      "must_mention": "dirty",
+      "why_it_matters": "A build from a modified working tree is not reproducible; omitting the flag is how that fact gets lost between the build and the reader."
+    }
+  ]
+}

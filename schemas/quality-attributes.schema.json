@@ -1,0 +1,178 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/althrussell/databricks-agentic-engineering-rails/schemas/quality-attributes.schema.json",
+  "title": "quality-attributes.yml",
+  "description": "Validates the repository-root quality-attributes.yml, the measurable non-functional contract for the reference application. Enforced by scripts/validate-manifests.py in `make check`, which also fails when a critical journey references no target and when an exception is past its expiry. Two structural choices carry most of the weight: a target must name its measurement and its enforcement point, and a measurement must name the environment and revision it came from, because a number from a laptop is not production evidence.",
+  "validates": "quality-attributes.yml",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "description", "target_selection", "critical_journeys", "attributes", "dependencies", "recovery", "support"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "description": { "type": "string", "minLength": 40 },
+    "target_selection": {
+      "type": "string",
+      "minLength": 80,
+      "description": "How the numbers below were chosen, from user impact and blast radius. Required because universal targets are invented targets, and a reader adapting this file needs the reasoning more than the figures."
+    },
+    "critical_journeys": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "journey", "users", "blast_radius", "targets"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^cj-[a-z0-9-]+$" },
+          "journey": { "type": "string", "minLength": 20 },
+          "users": { "type": "string", "minLength": 5 },
+          "blast_radius": {
+            "enum": ["single-user", "single-team", "workspace", "cross-team", "external"],
+            "description": "What breaks for whom when this journey fails. Drives how strict its targets are."
+          },
+          "targets": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "pattern": "^qa-[a-z0-9-]+$" },
+            "description": "Attribute ids that constrain this journey. minItems 1 implements the rule that a critical journey with no target is a release failure, not a licence to pick a convenient figure after testing."
+          }
+        }
+      }
+    },
+    "attributes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "attribute", "target", "measured_by", "enforcement", "status"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^qa-[a-z0-9-]+$" },
+          "attribute": { "enum": ["latency", "availability", "throughput", "concurrency", "cost", "freshness", "correctness", "recovery", "security", "accessibility", "operability", "portability", "maintainability"] },
+          "target": {
+            "type": "string",
+            "minLength": 15,
+            "description": "A number, a unit and a condition. 'Fast' is not a target; 'p95 under 400 ms for 20 concurrent users on a 2X-Small warehouse' is."
+          },
+          "measured_by": { "type": "string", "minLength": 10, "description": "The test, query or command that produces the number." },
+          "enforcement": {
+            "enum": ["gate", "eval", "observed", "none"],
+            "description": "gate: fails the build. eval: reported and trended, never blocks. observed: measured by hand during release verification. none: stated deliberately with no enforcement, which requires a rationale."
+          },
+          "status": { "enum": ["met", "not-met", "unmeasured"] },
+          "current": { "$ref": "#/$defs/measurement" },
+          "rationale": { "type": "string", "minLength": 20 }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "enforcement": { "const": "none" } }, "required": ["enforcement"] },
+            "then": { "required": ["rationale"] }
+          },
+          {
+            "if": { "properties": { "status": { "enum": ["met", "not-met"] } }, "required": ["status"] },
+            "then": { "required": ["current"], "description": "Met or not-met is a claim about a measurement, so the measurement has to be here." }
+          }
+        ]
+      }
+    },
+    "dependencies": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "assumption", "on_failure"],
+        "properties": {
+          "name": { "type": "string", "minLength": 3 },
+          "assumption": { "type": "string", "minLength": 20, "description": "What we are relying on it to do. Unstated assumptions are the ones that break." },
+          "on_failure": { "type": "string", "minLength": 20, "description": "Observed behaviour when it is unavailable, not intended behaviour." },
+          "tested_by": { "type": "string", "minLength": 3 }
+        }
+      }
+    },
+    "recovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rto", "rpo", "backup_owner", "restore_demonstrated"],
+      "properties": {
+        "rto": { "type": "string", "minLength": 2 },
+        "rpo": { "type": "string", "minLength": 2 },
+        "backup_owner": { "type": "string", "minLength": 3 },
+        "retention": { "type": "string" },
+        "restore_demonstrated": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status"],
+          "properties": {
+            "status": { "enum": ["demonstrated", "not-demonstrated"] },
+            "on": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+            "evidence": { "type": "string", "minLength": 3 },
+            "note": { "type": "string", "minLength": 15 }
+          },
+          "allOf": [
+            {
+              "if": { "properties": { "status": { "const": "demonstrated" } }, "required": ["status"] },
+              "then": { "required": ["on", "evidence"], "description": "A restore is demonstrated on a date with an artefact, or it is not demonstrated. Backup success is not restore evidence." }
+            },
+            {
+              "if": { "properties": { "status": { "const": "not-demonstrated" } }, "required": ["status"] },
+              "then": { "required": ["note"] }
+            }
+          ]
+        }
+      }
+    },
+    "support": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hours", "owner", "escalation"],
+      "properties": {
+        "hours": { "type": "string", "minLength": 3 },
+        "owner": { "type": "string", "minLength": 3 },
+        "escalation": { "type": "string", "minLength": 10 },
+        "runbook": { "type": "string" }
+      }
+    },
+    "exceptions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "applies_to", "reason", "owner", "compensating_control", "expires_on"],
+        "properties": {
+          "id": { "type": "string", "minLength": 2 },
+          "applies_to": { "type": "string", "pattern": "^qa-[a-z0-9-]+$" },
+          "reason": { "type": "string", "minLength": 20 },
+          "owner": { "type": "string", "minLength": 3 },
+          "compensating_control": {
+            "type": "string",
+            "minLength": 20,
+            "description": "What holds the risk down while the exception stands. An exception with no compensating control is an unmanaged risk with paperwork."
+          },
+          "expires_on": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+            "description": "Mandatory. The validator fails once this date passes, which is the only thing that makes an exception temporary."
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "measurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "measured_on", "environment", "revision"],
+      "properties": {
+        "value": { "type": "string", "minLength": 1 },
+        "measured_on": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+        "environment": {
+          "type": "string",
+          "minLength": 8,
+          "description": "Where it was measured, specifically enough to judge it: warehouse size, app compute, network path, concurrency."
+        },
+        "revision": { "type": "string", "pattern": "^([0-9a-f]{7,40}|none)$" }
+      }
+    }
+  }
+}

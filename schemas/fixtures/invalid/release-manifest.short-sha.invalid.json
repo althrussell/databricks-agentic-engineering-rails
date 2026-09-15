@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "pack_version": "0.1.0",
+  "built_on": "2026-09-15T12:00:00Z",
+  "git": {
+    "commit": "0000000000000000000000000000000000000000",
+    "dirty": false
+  },
+  "toolchain": {
+    "pandoc": "3.11",
+    "typst": "0.15.1"
+  },
+  "artifacts": [
+    {
+      "path": "release/01-field-guide.pdf",
+      "sha256": "000000000000",
+      "bytes": 12345
+    }
+  ]
+}

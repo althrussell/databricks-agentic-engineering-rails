@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/althrussell/databricks-agentic-engineering-rails/schemas/claims-ledger.schema.json",
+  "title": "claims-ledger.json",
+  "description": "Validates the repository-root claims-ledger.json. Enforced by scripts/validate-manifests.py in `make check`. One row per load-bearing factual claim about a system we do not control. The schema's job is to make an unevidenced claim unrepresentable: `evidence` has a minimum length because a claim whose evidence is 'yes' is a memory, not a citation.",
+  "validates": "claims-ledger.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "generated_on", "purpose", "statuses", "totals", "claims"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "generated_on": { "$ref": "#/$defs/date" },
+    "purpose": { "type": "string", "minLength": 60 },
+    "statuses": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "minLength": 20 },
+      "required": ["verified", "verified-absent", "expired"],
+      "description": "Every status the ledger uses, defined in the ledger itself, so a reader never has to guess what a status means."
+    },
+    "totals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["claims", "by_method", "by_status"],
+      "properties": {
+        "claims": { "type": "integer", "minimum": 1 },
+        "by_method": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 1 } },
+        "by_status": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 1 } }
+      }
+    },
+    "claims": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "claim", "source", "evidence", "verification_method", "verified_on", "verified_by", "reverify_interval_days", "status", "used_in"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{2,60}$" },
+          "claim": {
+            "type": "string",
+            "minLength": 25,
+            "description": "The assertion as the pack makes it, in full sentences. If it cannot be stated without the surrounding document, it is not a claim."
+          },
+          "source": { "type": "string", "minLength": 8 },
+          "evidence": {
+            "type": "string",
+            "minLength": 25,
+            "description": "What the source actually says, quoted or closely paraphrased. This is the field that survives when the URL moves."
+          },
+          "evidence_locator": {
+            "type": "string",
+            "minLength": 3,
+            "description": "An immutable pointer where one exists: file@sha, version number, table name. Required in practice for repo-file-read; a URL alone is mutable."
+          },
+          "verification_method": {
+            "enum": ["web-fetch", "repo-file-read", "local-probe", "workspace-probe", "cli-probe", "api-probe", "manual-read"]
+          },
+          "verified_on": { "$ref": "#/$defs/date" },
+          "verified_by": { "type": "string", "minLength": 3 },
+          "reverify_interval_days": { "type": "integer", "minimum": 1, "maximum": 365 },
+          "status": { "enum": ["verified", "verified-absent", "expired"] },
+          "used_in": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "pattern": "^[0-9A-Za-z][0-9A-Za-z-]*$" },
+            "description": "Document ids that rely on this claim. minItems 1 is the orphan check: a claim no document uses is either dead research or a document that lost its citation. The validator resolves each id against release-readiness.yml."
+          },
+          "note": { "type": "string", "minLength": 20 }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "verification_method": { "const": "repo-file-read" } }, "required": ["verification_method"] },
+            "then": {
+              "required": ["evidence_locator"],
+              "description": "A repository claim must pin the file and commit it was read from."
+            }
+          }
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "date": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" }
+  }
+}
