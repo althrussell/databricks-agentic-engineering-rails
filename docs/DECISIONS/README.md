@@ -39,3 +39,4 @@ would have made deliberately.
 | [0002](0002-execution-boundary.md) | Where agent commands actually run | provisional |
 | [0003](0003-pdf-toolchain.md) | pandoc + typst, four fonts, byte-identical output | accepted |
 | [0004](0004-posix-sh-for-diagnostics.md) | The doctor and the link checker carry no interpreter | accepted |
+| [0005](0005-forge-agnostic-gate.md) | The gate is a script, not a workflow file | accepted |

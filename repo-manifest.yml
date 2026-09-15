@@ -259,11 +259,27 @@ required_paths:
     phase: 5
 
   # ---------- Phase 6: CI and handover ----------
-  - path: .github/workflows/
+  - path: ci/run.sh
     why: >-
       Gates that exist only as documentation are advice. This is where the
-      standard becomes enforcement.
+      standard becomes enforcement - and it is a script rather than a workflow
+      file because the delivery destination runs no GitHub Actions, and neither
+      do a self-hosted forge with Actions disabled, GitLab, Azure DevOps or a
+      mirrored remote. One POSIX sh entry point taking a lane name, runnable on
+      a laptop, invoked by whatever runner a team happens to have.
+      docs/DECISIONS/0005-forge-agnostic-gate.md records the cost: on a forge
+      with no runner nothing blocks a push, and the pack says so rather than
+      implying a coverage it does not have.
     phase: 6
+    min_bytes: 1500
+  - path: scripts/install-hooks.sh
+    why: >-
+      The strongest enforcement available when the forge has no runner: a
+      pre-push hook running the same lane as CI. Opt-in and removable on
+      purpose, because a hook nobody can bypass is a hook people avoid by not
+      pushing.
+    phase: 6
+    min_bytes: 800
   - path: CHANGELOG.md
     why: An adopter needs to know what changed between the version they took and the current one.
     phase: 6
