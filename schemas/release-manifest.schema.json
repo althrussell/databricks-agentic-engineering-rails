@@ -114,6 +114,11 @@
           "source": {
             "type": "string",
             "minLength": 3
+          },
+          "max_overhang_pt": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Worst distance in PDF points that any glyph reaches past the right text edge. Recorded rather than merely checked, so a release can be audited for how close it came to the tolerance instead of only whether it passed. Justified text with hyphenation lets a hyphen hang slightly, so a small positive value is normal; see OVERFLOW_TOL_PT in scripts/build-docs.py."
           }
         }
       }

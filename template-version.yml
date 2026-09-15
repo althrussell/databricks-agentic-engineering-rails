@@ -28,7 +28,7 @@ verified_against:
     version: "1.1.0"
     status: verified
   unity_gateway_cli:
-    version: "0.1.0"
+    version: "0.1.0+84.gfddf95b"
     status: verified
     note: >-
       The ucode alias is present on this build. Record the full commit-qualified

@@ -356,7 +356,7 @@
       "id": "local-toolchain",
       "claim": "Tool versions verified on the build machine, used as the floor in scripts/doctor.sh.",
       "source": "local shell probe",
-      "evidence": "databricks CLI v1.1.0; ug 0.1.0 (ucode alias present); gh 2.92.0; Node v24.15.0; uv 0.11.15; Python 3.12.8; pandoc 3.11; typst 0.15.1; OpenTofu v1.12.6.",
+      "evidence": "databricks CLI v1.1.0; ug 0.1.0+84.gfddf95b (ucode alias present); gh 2.92.0; Node v24.15.0; uv 0.11.15; Python 3.12.8; pandoc 3.11; typst 0.15.1; OpenTofu v1.12.6.",
       "verification_method": "local-probe",
       "verified_on": "2026-09-15",
       "verified_by": "building-agent",

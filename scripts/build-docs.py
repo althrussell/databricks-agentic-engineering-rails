@@ -40,6 +40,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 
 try:
     import yaml
@@ -51,6 +52,20 @@ DOCS = os.path.join(ROOT, "docs")
 THEME = os.path.join(DOCS, "theme", "pack.typ")
 OUT = os.path.join(ROOT, "release")
 SPECIMEN = os.path.join(DOCS, "theme", "theme-specimen.md")
+COMBINED_ID = "databricks-agentic-engineering-rails-pack"
+
+# Paper sizes in millimetres, only the ones the theme is allowed to ask for.
+PAPERS = {"a4": (210.0, 297.0), "us-letter": (215.9, 279.4)}
+MM_PER_PT = 25.4 / 72.0
+
+# How far a glyph may stick past the text edge before it counts as overflow.
+#
+# It cannot be zero. Justified text with hyphenation lets the hyphen hang into
+# the margin, and the specimen's own worst case is 1.96pt (the word "restruc-"
+# on page 1). Real overflow is not subtle: an unwrapped code line or a table too
+# wide for the page runs over by tens of points. 4pt sits well clear of the
+# typographic overhang and well below anything worth shipping.
+OVERFLOW_TOL_PT = 4.0
 
 
 class DateSafeLoader(yaml.SafeLoader):
@@ -122,9 +137,92 @@ def page_count(path: str) -> int | None:
     return count or None
 
 
-def build_one(src: str, dest: str, meta: dict, toc: bool, epoch: int) -> None:
+def text_frame() -> tuple[float, float, float, float]:
+    """The text rectangle in PDF points, read from the theme rather than repeated.
+
+    A tolerance is only meaningful against the real page geometry, and the theme
+    is where that geometry is decided. Hard-coding A4 here would make the check
+    silently wrong the day someone sets `paper: "us-letter"`.
+    """
+    theme = open(THEME, encoding="utf-8").read()
+    paper = re.search(r'paper:\s*"([a-z0-9-]+)"', theme)
+    if not paper or paper.group(1) not in PAPERS:
+        sys.exit("cannot read a supported paper size from %s" % os.path.relpath(THEME, ROOT))
+    width_mm, height_mm = PAPERS[paper.group(1)]
+    margins = dict(re.findall(r"(top|bottom|left|right):\s*([0-9.]+)mm",
+                              re.search(r"margin:\s*\(([^)]*)\)", theme).group(1)))
+    if len(margins) != 4:
+        sys.exit("theme margin must name all four sides in mm")
+    m = {k: float(v) / MM_PER_PT for k, v in margins.items()}
+    return (m["left"], m["top"],
+            width_mm / MM_PER_PT - m["right"], height_mm / MM_PER_PT - m["bottom"])
+
+
+def overflow_report(pdf: str) -> tuple[list[str], float]:
+    """Words that run past the right text edge, worst offender first.
+
+    Text bounding boxes are what pdftotext can give us, so this catches the two
+    overflows that actually happen — an unwrapped code line and an over-wide
+    table — because both carry text. It does not catch a rule or an image that
+    overhangs with no glyph in it; PORTABILITY.md records that limit rather than
+    letting the check imply a guarantee it cannot make.
+    """
+    out = subprocess.run(["pdftotext", "-bbox", pdf, "-"],
+                         capture_output=True, text=True, check=False)
+    if out.returncode != 0:
+        return ["pdftotext failed, overflow not checked"], 0.0
+    _, _, right, _ = text_frame()
+    page = 0
+    worst = 0.0
+    hits: list[tuple[float, int, str]] = []
+    for line in out.stdout.splitlines():
+        if "<page" in line:
+            page += 1
+            continue
+        word = re.search(r'<word xMin="([0-9.]+)" yMin="[0-9.]+" xMax="([0-9.]+)"'
+                         r' yMax="[0-9.]+">(.*)</word>', line)
+        if not word:
+            continue
+        over = float(word.group(2)) - right
+        worst = max(worst, over)
+        if over > OVERFLOW_TOL_PT:
+            hits.append((over, page, word.group(3)))
+    hits.sort(reverse=True)
+    return ["page %d, %.1fpt past the edge:  %s"
+            % (pg, over, word[:60]) for over, pg, word in hits[:8]], worst
+
+
+def srclabel(src) -> str:
+    if isinstance(src, str):
+        return os.path.relpath(src, ROOT)
+    return "%d documents" % len(src)
+
+
+def fingerprint(pdf: str) -> str:
+    """Everything about a PDF that a reader can perceive, and nothing else.
+
+    This is the declared equivalence check of §13, used only when byte-identity
+    fails. Extracted text and per-word bounding boxes together pin the page
+    count, the reading order, the line breaking and the position of every glyph,
+    so two PDFs with the same fingerprint print and read identically. The two
+    timestamp lines are dropped because they are the thing being tolerated.
+
+    What it does not cover: the outline (bookmark) tree and embedded font
+    subsets. Both are determined by the intermediate typst source, which is
+    compared separately, but neither is read back out of the PDF here. That gap
+    is named in PORTABILITY.md rather than papered over.
+    """
+    out = subprocess.run(["pdftotext", "-bbox", pdf, "-"],
+                         capture_output=True, text=True, check=False)
+    kept = [ln for ln in out.stdout.splitlines()
+            if "CreationDate" not in ln and "ModDate" not in ln]
+    return hashlib.sha256("\n".join(kept).encode("utf-8")).hexdigest()
+
+
+def build_one(src, dest: str, meta: dict, toc: bool, epoch: int) -> None:
     cmd = [
-        "pandoc", src,
+        "pandoc",
+    ] + ([src] if isinstance(src, str) else list(src)) + [
         "--from", ("markdown+definition_lists+pipe_tables+table_captions"
                    "+footnotes+smart+implicit_figures"),
         "--to", "typst",
@@ -147,7 +245,8 @@ def build_one(src: str, dest: str, meta: dict, toc: bool, epoch: int) -> None:
     if result.returncode != 0 or not os.path.exists(dest):
         sys.stderr.write(result.stdout)
         sys.stderr.write(result.stderr)
-        sys.exit("pandoc failed for %s" % os.path.relpath(src, ROOT))
+        sys.exit("pandoc failed for %s" % (src if isinstance(src, str)
+                                           else "%d combined sources" % len(src)))
     # Warnings are worth seeing but are not failures: a missing font warning
     # under --ignore-system-fonts, for instance, means the theme asked for
     # something it should not have.
@@ -162,6 +261,10 @@ def main() -> int:
     ap.add_argument("--only", help="build a single document id (or 'specimen')")
     ap.add_argument("--specimen-only", action="store_true",
                     help="build only the theme specimen page")
+    ap.add_argument("--no-combined", action="store_true",
+                    help="skip the single combined PDF of the whole pack")
+    ap.add_argument("--check-reproducible", action="store_true",
+                    help="rebuild every artifact and require byte-identical output")
     args = ap.parse_args()
 
     require("pandoc", "Install with: brew install pandoc")
@@ -211,23 +314,45 @@ def main() -> int:
                              "date": doc_date,
                              "subtitle": doc["title"]}, True))
 
+    # The combined pack. Built as one pandoc invocation over every source rather
+    # than by stitching finished PDFs together, so it gets a single continuous
+    # table of contents and one bookmark tree instead of the flat concatenation
+    # `pdfunite` would leave behind.
+    combined_sources = [os.path.join(ROOT, d["path"]) for d in readiness["documents"]
+                        if d.get("pdf") and os.path.exists(os.path.join(ROOT, d["path"]))]
+    if (not args.only and not args.specimen_only and not args.no_combined
+            and len(combined_sources) > 1):
+        targets.append((combined_sources, os.path.join(OUT, "%s.pdf" % COMBINED_ID),
+                        {"docid": COMBINED_ID, "packversion": version,
+                         "status": status, "commit": git["commit"][:12],
+                         "date": doc_date,
+                         "subtitle": "The complete pack, %d documents"
+                                     % len(combined_sources)}, True))
+    elif len(combined_sources) <= 1 and not args.only and not args.specimen_only:
+        print("      skip  %-38s needs 2+ documents, %d written"
+              % (COMBINED_ID, len(combined_sources)))
+
     if not targets:
         sys.exit("nothing to build: no source documents exist and the specimen was excluded")
 
     artifacts = []
+    overflows: list[tuple[str, list[str]]] = []
     for src, dest, meta, toc in targets:
-        print("      build %-38s -> %s" % (os.path.relpath(src, ROOT),
-                                           os.path.relpath(dest, ROOT)))
+        print("      build %-38s -> %s" % (srclabel(src), os.path.relpath(dest, ROOT)))
         build_one(src, dest, meta, toc, epoch)
         row = {
             "path": os.path.relpath(dest, ROOT),
             "sha256": sha256(dest),
             "bytes": os.path.getsize(dest),
-            "source": os.path.relpath(src, ROOT),
+            "source": srclabel(src),
         }
         pages = page_count(dest)
         if pages:
             row["pages"] = pages
+        hits, worst = overflow_report(dest)
+        row["max_overhang_pt"] = round(worst, 2)
+        if hits:
+            overflows.append((os.path.relpath(dest, ROOT), hits))
         artifacts.append(row)
 
     manifest = {
@@ -259,6 +384,56 @@ def main() -> int:
               "(`make check` will validate it)")
     except Exception as exc:  # noqa: BLE001 - report and fail, whatever the cause
         sys.exit("release manifest is invalid: %s" % exc)
+
+    if overflows:
+        print()
+        print("      OVERFLOW — content runs past the right text edge by more than "
+              "%.0fpt:" % OVERFLOW_TOL_PT)
+        for path, hits in overflows:
+            print("        %s" % path)
+            for hit in hits:
+                print("          %s" % hit)
+        print()
+        print("      Fix the source, not the tolerance. A long code line wants a "
+              "manual break;")
+        print("      a wide table wants fewer columns or shorter headings.")
+        return 1
+
+    if args.check_reproducible:
+        print()
+        print("      reproducibility: rebuilding %d artifact(s) to compare"
+              % len(targets))
+        identical, equivalent, failed = [], [], []
+        with tempfile.TemporaryDirectory() as tmp:
+            for src, dest, meta, toc in targets:
+                again = os.path.join(tmp, os.path.basename(dest))
+                build_one(src, again, meta, toc, epoch)
+                name = os.path.basename(dest)
+                if sha256(again) == sha256(dest):
+                    identical.append(name)
+                elif fingerprint(again) == fingerprint(dest):
+                    equivalent.append(name)
+                else:
+                    failed.append(name)
+        for name in identical:
+            print("        byte-identical  %s" % name)
+        for name in equivalent:
+            print("        EQUIVALENT ONLY %s (same text, boxes and page count; "
+                  "different bytes)" % name)
+        for name in failed:
+            print("        NOT REPRODUCIBLE %s" % name)
+        print()
+        if failed:
+            print("      Neither standard met. Do not release this set.")
+            return 1
+        if equivalent:
+            print("      Standard met: declared equivalence, not byte-identity.")
+            print("      Record the renderer limitation in claims-ledger.json and "
+                  "name it in PORTABILITY.md")
+            print("      before releasing, per §13. Reaching for the weaker standard "
+                  "is allowed; doing it silently is not.")
+        else:
+            print("      Standard met: byte-identical output, the stronger of the two.")
 
     print()
     total = sum(a["bytes"] for a in artifacts)
