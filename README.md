@@ -17,6 +17,8 @@ Both tracks share the same harness, the same permission tiers, the same gateway
 route, the same gates and the same standard of evidence. That sharing is the
 point: a team should not need two engineering cultures because half its work
 deploys to Databricks and half does not.
+[Which track are you on?](#which-track-are-you-on) decides it in one question,
+and says what differs.
 
 > **Status: PREVIEW. Phase 1 of 6 is complete.** The harness is implemented and
 > verified against a live workspace. The 21 documents, the two reference
@@ -29,6 +31,7 @@ deploys to Databricks and half does not.
 ## Contents
 
 - [Who should read this](#who-should-read-this)
+- [Which track are you on?](#which-track-are-you-on)
 - [Why you should care](#why-you-should-care)
 - [Where this actually is](#where-this-actually-is)
 - [Start here](#start-here)
@@ -53,6 +56,58 @@ deploys to Databricks and half does not.
 
 If none of those is you and you have ten minutes, read
 [The four ideas](#the-four-ideas). They are the whole argument.
+
+## Which track are you on?
+
+One question decides it: **does the thing you are shipping have to run on
+Databricks?**
+
+| | **Track A — Databricks Apps** | **Track B — off-platform** |
+|---|---|---|
+| What you ship | An application Databricks hosts, reachable at a workspace URL | A service, job, CLI or library that runs where you already run things |
+| Where it runs | The Databricks Apps runtime | Your laptop, your CI, your cloud, your cluster |
+| Language | TypeScript, AppKit-first | Any — this repository's own code is POSIX sh and Python |
+| What the platform gives you | Hosting, identity, Unity Catalog access as the calling user, and the gateway | The gateway and the models. Nothing else |
+| How your code authenticates | The app's service principal, or the caller on-behalf-of | A CLI profile or OAuth from your own environment |
+| What "done" means | End-to-end tests against a real deployment | End-to-end tests against the real gateway route |
+
+**Doing both is the normal case,** and it is the one the pack is shaped for: a
+Databricks App, plus off-platform services that call the same models. You
+configure the harness once, the gateway once and the gate once.
+
+### What actually differs
+
+Almost nothing — and that is the argument rather than a convenience.
+
+| | Track A | Track B |
+|---|---|---|
+| Harness, permission tiers, guard, journal | same | same |
+| Gateway route, request tags, cost attribution | same | same |
+| The gate, the checks, the standard of evidence | same | same |
+| End-to-end tests | same requirement, against a deployment | same requirement, against the route |
+| Deployment, app config, on-behalf-of identity | yours to get right | not applicable |
+| Packaging and the runtime you already own | not applicable | yours to get right |
+
+The rows that say `same` are why this is one pack and not two.
+
+### Where to start, per track
+
+**Everything built so far is shared by both tracks.** Phase 1 delivered the
+harness, the governed route and the gates, and none of it is track-specific — so
+today the first move is identical either way, and nothing is skipped by taking
+it:
+
+| | Do this now | Arrives in Phase 2 | Phase 3 document |
+|---|---|---|---|
+| **Track A** | [Start here](#start-here) | `track-a-app/`, with `app.yaml`, `tests/e2e/` and `tests/security/` | 09, *Databricks Apps to a Production Standard* |
+| **Track B** | [Start here](#start-here) | `track-b-service/` | 10, *Off-Platform Engineering with Databricks-Hosted Models* |
+
+`track-a-app/` and `track-b-service/` are required paths in `repo-manifest.yml`,
+each recorded against the phase that produces it, so a release claiming Phase 2
+while either is absent fails the gate. The two documents are entries in the
+21-document plan on the [documentation site](#documentation-site) and are **not**
+gate-enforced paths. A plan is a plan, and saying which of the two you are
+looking at is the difference between a roadmap and a promise.
 
 ## Why you should care
 

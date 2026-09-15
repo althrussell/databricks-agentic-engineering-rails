@@ -28,6 +28,7 @@ Phase 3. Until they exist, the repository itself is the material:
 
 | Question | Where the answer lives, in the repository |
 |---|---|
+| Which of the two tracks am I on? | `README.md`, "Which track are you on?" — and see below |
 | Is my machine ready? | `make doctor` |
 | What does the standard actually enforce? | `harness/shared/` — permissions, gateway, mcp, boundary, guards |
 | What has actually been run, and against what? | `harness/evidence/verify-in-sandbox.md` |
@@ -37,6 +38,20 @@ Phase 3. Until they exist, the repository itself is the material:
 
 The repository `README.md` is the full front door: audiences, the argument, the
 three ways to start, and an honest account of what is not built. Read it there.
+
+### The two tracks
+
+**Track A** is a Databricks App: TypeScript, AppKit-first, hosted by Databricks
+and reachable at a workspace URL. **Track B** is everything off-platform — any
+language, any runtime you already own — using models hosted on Databricks through
+the governed gateway and nothing else from the platform. One question separates
+them: does the thing you are shipping have to run on Databricks?
+
+Everything built so far is shared by both. Phase 1 delivered the harness, the
+governed route and the gates, and none of it is track-specific, so the first move
+is the same either way. The track-specific parts are `track-a-app/` and
+`track-b-service/` in Phase 2, and documents 09 and 10 in the table below. Both
+are listed there as `planned`, which is what they are.
 
 ## Decision records
 
