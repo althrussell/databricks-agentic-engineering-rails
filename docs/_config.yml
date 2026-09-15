@@ -1,0 +1,66 @@
+# Jekyll configuration for GitHub Pages.
+#
+# Deliberately plain. This site is built by the branch-based Pages build from
+# `main` + `/docs` — there is no workflow file, no Actions run and no build step
+# in this repository, because the destination this pack is delivered into runs no
+# Actions at all. Same constraint that shaped the gate; see
+# DECISIONS/0005-forge-agnostic-gate.md.
+#
+# Consequences of "plain" that are worth knowing before editing this file:
+#
+#   * Only the plugins GitHub Pages allows can be used. Anything else is ignored
+#     silently, which is the worst failure mode, so nothing exotic is attempted.
+#   * There is no .nojekyll file, on purpose. .nojekyll would disable the Jekyll
+#     build and serve these .md files as raw text downloads rather than pages.
+#   * Every page must read correctly in three places: a plain text editor, the
+#     GitHub file view, and this site. That rules out shortcodes and Liquid in
+#     the body of a document.
+
+title: Databricks Agentic Engineering Rails
+description: >-
+  Standards, working code and proofs for building software with coding agents on
+  Databricks, to a production standard.
+
+# GitHub's own theme. Chosen because it is supported natively by the Pages build
+# (a remote theme would need a plugin), it needs no configuration, and it renders
+# tables and code the way the GitHub file view does — so a document does not
+# change meaning between the two places people will read it.
+theme: jekyll-theme-primer
+
+# Both of these are enabled by default on GitHub Pages. They are listed anyway,
+# because a default that a document silently depends on should be visible in the
+# configuration rather than assumed.
+#
+#   jekyll-optional-front-matter  lets a plain .md file with no front matter
+#                                 render as a page. Every document in this pack
+#                                 is a plain .md file, and adding front matter to
+#                                 all of them would put site machinery into files
+#                                 that also ship as PDFs.
+#   jekyll-relative-links         rewrites relative links between .md files to
+#                                 their published URLs. Without it, every
+#                                 cross-reference in these documents would 404 on
+#                                 the site while resolving correctly on GitHub —
+#                                 and scripts/link-check.sh, which checks the
+#                                 real file paths, would report the site as fine.
+plugins:
+  - jekyll-optional-front-matter
+  - jekyll-relative-links
+
+# Not part of the site.
+#
+#   theme/            the PDF theme: a Typst template and a specimen that exists
+#                     to be rendered by `make docs`, not read in a browser.
+#   README.md         the docs/ directory has no README; this line is a guard for
+#                     one being added later as a note to editors rather than as a
+#                     page.
+exclude:
+  - theme/
+  - README.md
+
+# Markdown settings matching the PDF pipeline as closely as the Pages build
+# allows, so a heading that anchors correctly here anchors correctly there.
+markdown: kramdown
+kramdown:
+  input: GFM
+  hard_wrap: false
+  syntax_highlighter: rouge
