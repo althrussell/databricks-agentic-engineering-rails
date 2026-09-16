@@ -109,6 +109,19 @@ environment. Two shapes result:
 
 That difference is stated in each harness's `RENDER-NOTES.md` rather than smoothed over.
 
+## What the launcher reaches, and what it does not
+
+The whole mechanism is one line: the launcher sets the environment and `exec`s the
+harness. That reaches the process it starts and every child of it — which includes a
+shell opened inside your editor, and so a launcher run from VS Code's integrated
+terminal is governed exactly as one run from a standalone terminal.
+
+It does not reach a process something else starts. An editor extension is started by
+the editor, so its traffic is shaped by whatever environment the editor resolved for
+itself, not by a launcher run earlier in a different shell. Treat an extension session
+as unverified until a row for it appears in `system.ai_gateway.usage` under your
+request tags.
+
 ## What is not proved
 
 A launcher setting `ANTHROPIC_BASE_URL` is setting a default, not installing a control.

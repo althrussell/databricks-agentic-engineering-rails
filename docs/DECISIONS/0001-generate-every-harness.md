@@ -85,6 +85,15 @@ config is not evidence that it enforces anything. Three of the five cannot expre
 the middle tier the way Claude Code can, and a matrix that hid that would be the
 exact defect this pack argues against.
 
+**Treat the VS Code extensions for Claude Code and Codex as two more harnesses.**
+Rejected, because a harness here is something a launcher starts and therefore
+something the gateway environment reaches. An extension is started by the editor, so
+adding it would mean either proving from a gateway-side query that the extension
+routes through the gateway, or shipping a sixth directory whose "model traffic
+governed" column could not be filled in honestly. `docs/01-prerequisites.md` points
+readers at the integrated terminal instead, which needs no new configuration and
+makes no new claim.
+
 **Normalise downward — express only what all five harnesses support.** Rejected
 because it would throw away Claude Code's hook, which is the only mechanism here
 that turns a written refusal into an actual one. The policy is allowed to be
@@ -95,3 +104,7 @@ richer than the weakest renderer; the renderer is required to say so.
 `ug` gains model routing for Cursor; Codex CLI gains a pre-execution hook or a
 rule list; or a sixth harness is added. Any of those changes a "no" in the
 comparison table, and that table is the summary of this record.
+
+Also revisit if someone verifies, from a gateway-side query, that a VS Code extension
+session routes through the gateway. That would turn the rejected alternative above
+into a sixth row rather than a paragraph.

@@ -55,6 +55,29 @@ One of these. The setup pages cover the rest.
 | GitHub Copilot CLI | `npm install -g @github/copilot` |
 | OpenCode | `curl -fsSL https://opencode.ai/install \| bash` |
 
+## Your editor
+
+Use whichever one you already use. A harness is a process; a launcher sets the gateway
+environment and `exec`s it, so what governs a session is how it was started and not
+what you edit files in.
+
+If that editor is VS Code, run the launcher in its **integrated terminal**:
+
+```sh
+./harness/claude-code/launch.sh
+```
+
+The integrated terminal is a child shell, so the environment the launcher sets applies
+to the session exactly as it does in a standalone terminal. There is nothing extra to
+install and nothing extra to configure.
+
+The VS Code **extensions** for Claude Code and Codex are a different route, and this
+pack does not cover them. VS Code starts an extension, not the launcher, so whether one
+picks up the gateway environment depends on how VS Code resolved its own — which varies
+with how VS Code itself was started. That is not a claim that extensions bypass the
+gateway. It is a claim that this pack has not proved it either way, and the only thing
+that settles it is the gateway-side query in `docs/03-gateway-auth.md`.
+
 ## Optional, and what you lose without it
 
 | Tool | Needed for | Without it |
