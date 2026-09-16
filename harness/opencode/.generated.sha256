@@ -1,0 +1,21 @@
+# harness/opencode/.generated.sha256
+# Written by harness/scripts/render.py. Read by harness/scripts/verify.sh,
+# which is POSIX sh and parses this file with no YAML and no JSON.
+#
+# Tab-separated. One record per line:
+#   schema     <n>
+#   inputs     <sha256 over every file the renderer read>
+#   file       <mode> <sha256> <path relative to this directory>
+#   unmanaged  <path>   hand-written; its content is deliberately not checked
+#
+# A changed `inputs` means the policy moved and this directory needs
+# regenerating. A changed `file` hash with `inputs` intact means someone
+# edited the output. verify.sh reports those two cases differently, because
+# they are different mistakes.
+schema	1
+inputs	29b553f747d0cb5a00cbb666c6dc376a9d5d53d339157578c2f27db1fe73128f
+file	644	9e27833044e6ee856529dcb9d78ca9d5f90f42d49676ce0a703513372254ecfa	AGENTS.md
+file	644	1f6a11ddadd93f4b282a9690384f74176d3384301d9eabc70d7574305c9e3572	RENDER-NOTES.md
+file	755	a71ced176251449557d9b59030d2c9d2b5e3c355bc7245502fc74a5f0161b7fb	launch.sh
+file	644	18d212b63cfa40ee88c8616dc24eff30a96b0e663da7a756a9c5a7d8aae410a6	opencode.json
+unmanaged	SETUP.md

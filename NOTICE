@@ -125,5 +125,5 @@ OTHER TOOLS NAMED BUT NOT DEPENDED ON
     Chosen over Terraform because a publicly forkable repository should not
     require a BUSL-licensed binary to run its own checks. The configuration is
     written to the Databricks provider and is expected to work with Terraform,
-    but only OpenTofu was exercised — PORTABILITY.md carries that as a NOT
-    VERIFIED cell rather than a parity claim.
+    but only OpenTofu was exercised. Treat Terraform parity as untested rather
+    than as a claim made here.

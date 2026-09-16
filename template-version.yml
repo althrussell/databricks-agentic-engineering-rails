@@ -1,9 +1,8 @@
 # template-version.yml — which rails this is, and what they were actually run
 # against.
 #
-# scripts/new-project.sh copies this file into every generated project, with
-# upstream.commit filled in, so a project six months old can answer where it came
-# from without archaeology.
+# `scripts/doctor.sh` and `scripts/build-docs.py` both read `version` from here, so
+# a checkout can say which rails it is on without archaeology.
 #
 # `verified_against` is a record, not a requirement. `verified` means the pack was
 # exercised with that version on that platform. `expected` means the code is
@@ -71,14 +70,5 @@ verified_against:
       OpenTofu was chosen because a publicly forkable repository should not
       require a BUSL-licensed binary. Treat Terraform compatibility as untested
       rather than as parity.
-  container_runtime:
-    version: "none"
-    status: not-verified
-    note: >-
-      No container runtime was available on the build machine, so the harness
-      verification ran in an isolated scratch HOME rather than a disposable
-      container. That isolates configuration and credentials but not the
-      filesystem or the network. Tracked as g-container-runtime in
-      release-readiness.yml.
 
 breaking_changes: []

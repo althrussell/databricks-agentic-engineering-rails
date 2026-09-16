@@ -1,4 +1,4 @@
-# 0003 — pandoc + typst, four fonts, byte-identical output
+# 0003 — pandoc + typst, bundled fonts, stable rebuilds
 
 **Status:** accepted
 **Date:** 2026-09-15
@@ -38,12 +38,12 @@ not claim to have.
 **The build fails on overflow.** `scripts/build-docs.py` measures every glyph's
 distance past the right text edge with `pdftotext -bbox` and fails past 4pt. The
 tolerance is not zero because justified text with hyphenation lets a hyphen hang
-into the margin — the specimen's own worst case is 1.95pt — and it is not larger
-because real overflow is not subtle. The worst overhang per artifact is recorded
-in `release/release-manifest.json`, so a release can be audited for how close it
-came rather than only whether it passed.
+into the margin — the worst case observed in this pack is 1.95pt — and it is not
+larger because real overflow is not subtle. The worst overhang per document is
+printed in the build summary, so a reader can see how close it came rather than
+only whether it passed.
 
-**`make docs-repro` states which of two standards was met.** Byte-identical is
+**`build-docs.py --check-reproducible` states which of two standards was met.** Byte-identical is
 the strong one and is what this toolchain currently achieves. If a future
 renderer version cannot, the build falls back to a declared equivalence check —
 identical extracted text and per-word bounding boxes, hence identical page count,
@@ -64,16 +64,15 @@ contents and one bookmark tree.
   flush left because a `line` carries no width for an aligner to work with, the
   first captioned table announcing itself as "Table 3" because pandoc wraps every
   table in a figure, and a captioned table drifting to the page centre because a
-  figure is as wide as its widest part. `docs/theme/theme-specimen.md` exists as
-  the regression target for exactly this, and it is the first thing `make docs`
-  builds.
+  figure is as wide as its widest part. Build the combined PDF and look at it; the
+  overflow check catches width, not taste.
 - `pdftotext` and `pdfinfo` (poppler) become build dependencies of the *checks*,
   not of the documents. `make docs` still produces PDFs without them; the
   overflow check reports that it could not run.
 - The overflow check reads text bounding boxes, so it catches an unwrapped code
   line or an over-wide table — both carry glyphs — and not a rule or an image
-  that overhangs with nothing in it. `PORTABILITY.md` records that limit rather
-  than letting the check imply a guarantee it cannot make.
+  that overhangs with nothing in it. That limit is stated here rather than left
+  for the check to imply a guarantee it cannot make.
 
 ## Rejected alternatives
 
@@ -101,6 +100,6 @@ of contents is the point of it.
 ## Revisit when
 
 typst's PDF output stops being byte-reproducible under a pinned version — at
-which point `make docs-repro` will say so on its own — or a document needs a
+which point `build-docs.py --check-reproducible` will say so on its own — or a document needs a
 script the bundled fonts do not cover, which would force either a fifth font with
 its licence recorded or a different renderer.

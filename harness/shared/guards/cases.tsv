@@ -19,7 +19,7 @@
 # classifier and deny-proof.sh only ever passes these strings to it as an argument.
 expect	rule	command	why
 deny	force-push	git push --force origin main	The plain spelling. If this passes, nothing below matters.
-deny	force-push	git -C . push origin main --force	A global option before the subcommand. A harness rule anchored on the first two words misses this one (claim cc-bash-rule-limits).
+deny	force-push	git -C . push origin main --force	A global option before the subcommand. A harness rule anchored on the first two words misses this one.
 deny	force-push	git -c push.default=current push origin main -f	Inline config, and the short flag last, so trailing-flag matching has to work too.
 deny	force-push	git 'push' origin main --force-with-lease	Quoted subcommand. --force-with-lease is safer than --force and still rewrites what a colleague holds.
 deny	force-push	/usr/bin/git push --Force	Absolute path and mixed case. Normalisation, not luck.
@@ -51,9 +51,9 @@ allow	-	git log --oneline -n 5	Reading history.
 allow	-	git clean -fd	Without -x this leaves ignored files alone, so it is ordinary tidying.
 allow	-	pytest -q tests/e2e	Tests are the point of the harness.
 allow	-	make check	The repository's own gate.
-allow	-	uv run python scripts/validate-manifests.py --self-test	A long argv with flags, to show the guard is not startled by shape.
+allow	-	uv run python scripts/tool-budget.py --json --profile labs	A long argv with flags, to show the guard is not startled by shape.
 allow	-	npm run build	Contains "run" and is not a bundle run.
-allow	-	rm -rf ./node_modules	Deleting inside the working tree. The boundary confines the path; this guard does not try to.
+allow	-	rm -rf ./node_modules	Deleting inside the working tree. The harness's working-directory scope confines the path; this guard does not try to.
 allow	-	databricks bundle validate -t dev	Validating is reading. Only deploy, destroy and run are refused.
 allow	-	databricks apps list	Listing apps is a read.
 allow	-	curl -sfSL https://docs.databricks.com/aws/en/ai-gateway/budgets	Fetching platform documentation over an allowlisted host.

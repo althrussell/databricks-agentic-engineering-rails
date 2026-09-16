@@ -12,7 +12,7 @@
 # The renderer needs a YAML parser; the check does not, because `.generated.sha256`
 # is deliberately a flat tab-separated file. So `make check` can tell you that your
 # harness config has drifted even on a machine where `make harness-generate` would
-# fail for want of a dependency. See docs/DECISIONS/0004-two-languages.md.
+# fail for want of a dependency. See docs/DECISIONS/0004-posix-sh-for-diagnostics.md.
 #
 # The two failures it separates
 # -----------------------------
@@ -76,11 +76,14 @@ hash_file() { hash_stdin < "$1"; }
 # bytes, hashed as a whole. The sort is over the whole line and therefore over the
 # hash, which is why LC_ALL=C matters - a locale-aware sort would order these
 # differently from Python's and every comparison would fail for no reason.
+#
+# One digest covers all five harnesses because they share a launcher template. A scope
+# that pretended otherwise would call a stale directory fresh, which is the one wrong
+# answer this file must never give.
 inputs_digest() {
-  harness="$1"
   {
     printf '%s  %s\n' "$(hash_file harness/scripts/render.py)" harness/scripts/render.py
-    find harness/shared "harness/scripts/templates/$harness" -type f \
+    find harness/shared harness/scripts/templates -type f \
          ! -name '*.pyc' ! -name '.DS_Store' 2>/dev/null \
       | grep -v '/__pycache__/' \
       | while IFS= read -r f; do
@@ -108,7 +111,6 @@ if [ -z "$(printf '%s' "$DIRS" | tr -d ' \n')" ]; then
 fi
 
 for dir in $DIRS; do
-  harness=$(basename "$dir")
   manifest="$dir/.generated.sha256"
 
   if [ ! -f "$manifest" ]; then
@@ -132,7 +134,7 @@ for dir in $DIRS; do
     fail "$manifest records no inputs digest, so this check cannot tell a stale directory from an edited one. Regenerate it."
     continue
   fi
-  actual=$(inputs_digest "$harness")
+  actual=$(inputs_digest)
   if [ "$recorded" = "$actual" ]; then
     stale=0
   else
@@ -192,7 +194,7 @@ for dir in $DIRS; do
 
   if [ "$stale" = 1 ]; then
     loud "STALE   $dir"
-    loud "        harness/shared/ or this harness's templates changed after the last"
+    loud "        harness/shared/, the templates or the renderer changed after the last"
     loud "        render, so these files describe the previous policy. $drifted of the"
     loud "        recorded files differ."
     loud "        Fix: make harness-generate, then read the diff. That diff is the"

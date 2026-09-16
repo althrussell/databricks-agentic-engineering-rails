@@ -25,8 +25,8 @@ record that names it, so the history of the reasoning survives.
 ## Who owns these
 
 **An agent may draft a decision record; a human owns the decision.** A drafted
-record stays `provisional` until a human accepts it, and `provisional` records
-are listed in `release-readiness.yml` rather than presented as settled. This is
+record stays `provisional` until a human accepts it, and the Status line says so
+in the record's own first section rather than being presented as settled. This is
 not ceremony: an agent that can both make an architectural choice and write the
 justification for it will produce a coherent-sounding record for a choice nobody
 would have made deliberately.
@@ -35,8 +35,7 @@ would have made deliberately.
 
 | # | Decision | Status |
 |---|---|---|
-| [0001](0001-reference-harness-first.md) | One harness implemented, four honestly labelled | accepted |
-| [0002](0002-execution-boundary.md) | Where agent commands actually run | provisional |
-| [0003](0003-pdf-toolchain.md) | pandoc + typst, four fonts, byte-identical output | accepted |
+| [0001](0001-generate-every-harness.md) | Five harnesses generated, each labelled by what it can enforce | accepted |
+| [0003](0003-pdf-toolchain.md) | pandoc + typst, bundled fonts, stable rebuilds | accepted |
 | [0004](0004-posix-sh-for-diagnostics.md) | The doctor and the link checker carry no interpreter | accepted |
-| [0005](0005-forge-agnostic-gate.md) | The gate is a script, not a workflow file | accepted |
+| [0005](0005-the-gate-is-a-command.md) | The gate is a command, not a workflow file | accepted |

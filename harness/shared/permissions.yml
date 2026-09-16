@@ -1,7 +1,7 @@
 # permissions.yml — the three permission tiers, once, in a neutral vocabulary.
 #
 # Rendered per harness by harness/scripts/generate.sh. See harness/shared/README.md
-# for the vocabulary and docs/02-harness-standard.md for the reasoning.
+# for the vocabulary and docs/02-permissions.md for the reasoning.
 #
 # The design defaults this file encodes, stated so a reviewer can check the rows
 # against them:
@@ -18,10 +18,10 @@ schema_version: 1
 
 default_mode: manual
 default_mode_note: >-
-  Sessions start in the mode that asks before acting. Two of the looser modes
-  cannot be selected from a committed project settings file at all (see claim
-  cc-defaultmode-project-limit), so a repository that wants them has to say so in
-  its own documentation rather than assume the file will apply.
+  Sessions start in the mode that asks before acting. In some harnesses the looser
+  modes cannot be selected from a committed project settings file at all, so a
+  repository that wants one has to say so in its own documentation and let a human
+  choose it — which is the right shape for that decision anyway.
 
 tiers:
   - id: auto-allow
@@ -50,9 +50,11 @@ capabilities:
     what: Create and edit files inside the repository working tree
     capabilities: ["tool(Edit)", "tool(Write)", "tool(NotebookEdit)"]
     note: >-
-      Scoped by the boundary, not by this rule. The path fence lives in
-      boundary.yml because a permission rule that names paths is bypassable by a
-      command that writes the same path a different way.
+      Scoped to the working tree by the harness, not by this rule. A permission rule
+      that names paths is bypassable by a command that writes the same path a
+      different way, so the fence belongs in whatever working-directory scope the
+      harness itself enforces. Every harness rendered here has one; they are not the
+      same shape, and each generated RENDER-NOTES.md says which.
   - id: local-git
     tier: auto-allow
     what: Inspect and change local history, with nothing leaving the machine
@@ -152,8 +154,11 @@ capabilities:
     capabilities: ["shell(security find-generic-password)"]
     guard_rule: credential-access
     note: >-
-      The file paths are fenced in boundary.yml, where the boundary can enforce
-      them for every command rather than for the spelling of one command.
+      One command, one spelling. The guard catches the awkward spellings on
+      normalised text; nothing here can stop a credential read expressed as data.
+      That is a reason to keep credentials out of reach of the session — a
+      short-lived token from `databricks auth token`, not a long-lived one in a
+      file the agent can read.
   - id: message-a-person
     tier: never-automatic
     what: Send a message, e-mail or comment to a named individual
@@ -170,6 +175,7 @@ capabilities:
     capabilities: []
     guard_rule: destructive-path
     note: >-
-      Enforced by the guard on the command text and by the boundary on the
-      filesystem. Two mechanisms because the first is defeated by an unusual
-      spelling and the second is defeated by a missing sandbox.
+      Enforced by the guard on the command text, and by the harness's own
+      working-directory scope on the filesystem. Two mechanisms because the first is
+      defeated by an unusual spelling and the second by a harness that has no such
+      scope.

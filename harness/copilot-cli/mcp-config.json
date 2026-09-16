@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "databricks": {
+      "type": "http",
+      "url": "https://REPLACE-WITH-YOUR-WORKSPACE-HOST/ai-gateway/mcp-services/REPLACE.WITH.YOUR_MCP_SERVICE",
+      "headers": {
+        "Authorization": "Bearer ${DAER_MCP_TOKEN}"
+      },
+      "tools": [
+        "get_current_user",
+        "get_table_stats_and_schema",
+        "list_compute",
+        "execute_sql",
+        "manage_app"
+      ]
+    }
+  }
+}

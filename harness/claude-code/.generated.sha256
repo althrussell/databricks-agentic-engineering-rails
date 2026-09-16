@@ -9,15 +9,15 @@
 #   unmanaged  <path>   hand-written; its content is deliberately not checked
 #
 # A changed `inputs` means the policy moved and this directory needs
-# regenerating. A changed `file` hash with `inputs` intact means someone edited
-# the output. verify.sh reports those two cases differently, because they are
-# different mistakes.
+# regenerating. A changed `file` hash with `inputs` intact means someone
+# edited the output. verify.sh reports those two cases differently, because
+# they are different mistakes.
 schema	1
-inputs	56f7560200ed4290016f7fb5151c64d22c4b42eb23a3c48f857ba0ac662e8c0d
-file	644	4db14e3c868966afd07ddf1c48a16b670fb5514e89646494e821d83bcf8ea1e9	RENDER-NOTES.md
+inputs	29b553f747d0cb5a00cbb666c6dc376a9d5d53d339157578c2f27db1fe73128f
+file	644	d254cb1b912f1c247a7eb56333401a7703755d4e576e46fc4823e767bfb5efbb	RENDER-NOTES.md
 file	755	46beef584642d4efb7e199b5b50db226e6f664b15237640dbc9df66ebb106481	hooks/mcp-auth-header.sh
 file	755	6d15345ff1cc871094b92dbdd4bf921cde165dafc820353ee467e24d47aaf230	hooks/pretooluse-guard.sh
-file	755	816bfd2a9f8262054a2e3be56f3323a37775175b3463a818301b50809f20eb2f	launch.sh
+file	755	bbea83e33d173c6468ae13b0b2e35b7cd9aad43e7a5dac3f613815e5e064b391	launch.sh
 file	644	5f2583f14cc9655b4a412421ae46bb380694dd583ce2758256f4e22b02751306	mcp.json
-file	644	7b4fa4434f5c18b4e5b50cfbc36f46d9391c3280e75d11934670722f54269821	settings.json
-unmanaged	README.md
+file	644	5d717ba287de543f1a745b23fbcc15c86b2489da89a3009175425140da40357b	settings.json
+unmanaged	SETUP.md

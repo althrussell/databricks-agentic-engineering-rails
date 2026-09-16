@@ -60,7 +60,7 @@ slug() {
     | sed 's/[^a-z0-9 _-]//g; s/^ *//; s/ *$//; s/ /-/g'
 }
 
-# docs/../schemas/README.md and schemas/README.md are the same file, and only one
+# docs/../harness/README.md and harness/README.md are the same file, and only one
 # of them is worth printing in an error a reader has to act on.
 collapse() {
   printf '%s' "$1" | sed -e 's|/\./|/|g' -e ':a' -e 's|[^/][^/]*/\.\./||; ta' -e 's|^\./||'
@@ -132,8 +132,9 @@ check_internal() {
 }
 
 # ---------------------------------------------------------------- external ----
-# URLs come from two places: prose in the markdown, and sources.yml, which is the
-# list the pack claims to have verified. Both have to answer.
+# Every URL in the markdown, including the table in docs/SOURCES.md. Fenced code
+# blocks are skipped, so an example URL in a snippet is not treated as a claim -
+# which is why a source URL belongs in a table and not in a fence.
 external_urls() {
   {
     for file in $(markdown_files); do
@@ -141,7 +142,6 @@ external_urls() {
         | grep -o 'https\{0,1\}://[A-Za-z0-9._~:/?#@!$&*+,;=%-]*' \
         | sed 's/[.,)]*$//'
     done
-    [ -f sources.yml ] && grep -o 'https\{0,1\}://[^ ]*' sources.yml | sed 's/[.,)]*$//'
   } | sed 's|/$||' | sort -u
 }
 

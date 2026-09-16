@@ -1,30 +1,41 @@
 # Databricks Agentic Engineering Rails
 
-**Standards, working code and proofs for building software with coding agents on
-Databricks — to a production standard, on rails a team can actually follow.**
+**Get a coding agent set up on your own laptop — governed through Unity AI Gateway,
+with permissions that actually refuse things — in about thirty minutes.**
 
 ![Ten navy ceramic blocks lie scattered at random angles on an oat surface to the left of a pair of glossy lava-red rails; between the rails the same blocks form a single evenly spaced procession climbing to a stack of four smoked-glass slabs on brushed posts](docs/assets/img/hero-on-rails.jpg)
 
-Two tracks, one set of rails:
+You have a laptop, a harness you already like, and a Databricks workspace. This
+repository gets you from that to a session whose model spend is attributable, whose
+tools are governed by Unity Catalog, and which will not force-push to a shared branch
+because a file it read told it to.
 
-- **Track A — Databricks Apps.** TypeScript, AppKit-first, deployed as a
-  Databricks App, with real end-to-end tests against a real deployment.
-- **Track B — off-platform engineering.** Any language, any repository, anywhere
-  — using models hosted on Databricks through a governed gateway, and nothing
-  else from the platform.
+Five harnesses are supported — Claude Code, Codex CLI, Cursor CLI, GitHub Copilot CLI
+and OpenCode. They are **not** equivalent, and the table below says how they differ
+before you pick one.
 
-Both tracks share the same harness, the same permission tiers, the same gateway
-route, the same gates and the same standard of evidence. That sharing is the
-point: a team should not need two engineering cultures because half its work
-deploys to Databricks and half does not.
-[Which track are you on?](#which-track-are-you-on) decides it in one question,
-and says what differs.
+```sh
+git clone https://github.com/althrussell/databricks-agentic-engineering-rails
+cd databricks-agentic-engineering-rails
+./scripts/doctor.sh                       # is this laptop ready
+```
 
-> **Status: PREVIEW. Phase 1 of 6 is complete.** The harness is implemented and
-> verified against a live workspace. The 21 documents, the two reference
-> applications, the labs and the validation kit are **not written yet**. Nothing
-> in this repository is marked as passing that has not been run. Read
-> [Where this actually is](#where-this-actually-is) before planning around it.
+Then open your harness's setup page. That is the whole path.
+
+| Harness | Setup | Model traffic governed | Never-automatic tier enforced |
+| :--- | :--- | :--- | :--- |
+| Claude Code | [`harness/claude-code/SETUP.md`](harness/claude-code/SETUP.md) | Yes | Before the command runs, and journalled |
+| Codex CLI | [`harness/codex/SETUP.md`](harness/codex/SETUP.md) | Yes | By posture and review |
+| OpenCode | [`harness/opencode/SETUP.md`](harness/opencode/SETUP.md) | Yes | By pattern, three verdicts |
+| Cursor CLI | [`harness/cursor/SETUP.md`](harness/cursor/SETUP.md) | No — tools only | By rule and review |
+| GitHub Copilot CLI | [`harness/copilot-cli/SETUP.md`](harness/copilot-cli/SETUP.md) | No — tools only | By launch flag and review |
+
+Two columns, not five green ticks. `ug` routes model traffic for four of the five; for
+Cursor it registers MCP servers only. And only Claude Code can stop a
+never-automatic command *before* it runs — the others record the intent and rely on a
+human reading the diff. Each harness's generated `RENDER-NOTES.md` says this about that
+harness and nothing about the others, so the strongest one's guarantees cannot be
+mistaken for yours.
 
 ---
 
@@ -33,8 +44,6 @@ and says what differs.
 - [Who should read this](#who-should-read-this)
 - [Which track are you on?](#which-track-are-you-on)
 - [Why you should care](#why-you-should-care)
-- [Where this actually is](#where-this-actually-is)
-- [Start here](#start-here)
 - [The four ideas](#the-four-ideas)
 - [How the gate is enforced](#how-the-gate-is-enforced)
 - [What is in this repository](#what-is-in-this-repository)
@@ -48,210 +57,53 @@ and says what differs.
 
 | If you are | Read this because | Start at |
 |---|---|---|
-| **An engineer about to use a coding agent on real work** | It gives you a harness that is configured, not improvised: permission tiers that have been watched refusing something, a gateway route that has been watched answering, and a single command that tells you whether your machine is ready. | `make doctor`, then `harness/claude-code/README.md` |
-| **A tech lead or staff engineer setting a team standard** | It is the standard, written down, with the decisions and the rejected alternatives attached — so you inherit an argument that has already been had rather than having it again in six months. | `docs/DECISIONS/` and `quality-attributes.yml` |
-| **A platform or workspace admin** | Agent traffic is model spend, and model spend is invisible until it is governed. This shows the single route to enforce, the request tags that make usage attributable, and what a client-side environment variable does and does not control. | `harness/shared/gateway.yml` and `harness/evidence/verify-in-sandbox.md` |
-| **A security or risk reviewer** | It states what each mechanism enforces, what defeats it, and — in one file — what was actually run, on what, and what was deliberately not proved. | `harness/evidence/verify-in-sandbox.md`, then `harness/shared/boundary.yml` |
-| **Someone who will never clone this** | There is a standalone digest of the recommendations, frameworks and practices, designed to be read on its own with no repository and no network. | `docs/00-recommendations-and-practices.md` (Phase 3) |
+| **An engineer about to use a coding agent on real work** | It gives you a harness that is configured, not improvised: permission tiers that have been watched refusing something, a gateway route that has been watched answering, and one command that tells you whether your machine is ready. | `./scripts/doctor.sh`, then your harness's `SETUP.md` |
+| **A tech lead setting a team standard** | It is the standard, written down, with the decisions and the rejected alternatives attached — so you inherit an argument that has already been had rather than having it again in six months. | [`docs/02-permissions.md`](docs/02-permissions.md), then [`docs/DECISIONS/`](docs/DECISIONS/) |
+| **A platform or workspace admin** | Agent traffic is model spend, and model spend is invisible until it is governed. This shows the route to enforce, the request tags that make usage attributable, and what a client-side environment variable does and does not control. | [`docs/03-gateway-auth.md`](docs/03-gateway-auth.md) |
+| **A security or risk reviewer** | It states what each mechanism enforces, what defeats it, and what was deliberately not proved. | [`docs/02-permissions.md`](docs/02-permissions.md), then your harness's `RENDER-NOTES.md` |
+| **Someone who will never clone this** | The six documents in [`docs/`](docs/) are written to be read on their own, with no repository and no network. `make docs` builds them as PDFs. | [`docs/00-start-here.md`](docs/00-start-here.md) |
 
 If none of those is you and you have ten minutes, read
 [The four ideas](#the-four-ideas). They are the whole argument.
 
 ## Which track are you on?
 
-One question decides it: **does the thing you are shipping have to run on
-Databricks?**
+One question: **does the thing you are shipping have to run on Databricks?**
 
-| | **Track A — Databricks Apps** | **Track B — off-platform** |
-|---|---|---|
-| What you ship | An application Databricks hosts, reachable at a workspace URL | A service, job, CLI or library that runs where you already run things |
-| Where it runs | The Databricks Apps runtime | Your laptop, your CI, your cloud, your cluster |
-| Language | TypeScript, AppKit-first | Any — this repository's own code is POSIX sh and Python |
-| What the platform gives you | Hosting, identity, Unity Catalog access as the calling user, and the gateway | The gateway and the models. Nothing else |
-| How your code authenticates | The app's service principal, or the caller on-behalf-of | A CLI profile or OAuth from your own environment |
-| What "done" means | End-to-end tests against a real deployment | End-to-end tests against the real gateway route |
+**Track A — you are building a Databricks App.** The platform is both your runtime and
+your governance plane. Read [`docs/03-gateway-auth.md`](docs/03-gateway-auth.md) for how
+sessions authenticate, then the AppKit and Apps sources in
+[`docs/SOURCES.md`](docs/SOURCES.md). This repository's own `make check` is the shape a
+Track A repository's CI should have.
 
-**Doing both is the normal case,** and it is the one the pack is shaped for: a
-Databricks App, plus off-platform services that call the same models. You
-configure the harness once, the gateway once and the gate once.
+**Track B — you are writing software with nothing to do with Databricks, and you want
+the models governed anyway.** This is the more common case and it works: the gateway is
+a model endpoint and an MCP registry, and neither cares what you are building.
+Everything here applies except the Apps-specific sources. Your CI runs wherever your
+code lives, which is why [`docs/05-ci-test-docs.md`](docs/05-ci-test-docs.md) is written
+to be forge-agnostic.
 
-### What actually differs
-
-Almost nothing — and that is the argument rather than a convenience.
-
-| | Track A | Track B |
-|---|---|---|
-| Harness, permission tiers, guard, journal | same | same |
-| Gateway route, request tags, cost attribution | same | same |
-| The gate, the checks, the standard of evidence | same | same |
-| End-to-end tests | same requirement, against a deployment | same requirement, against the route |
-| Deployment, app config, on-behalf-of identity | yours to get right | not applicable |
-| Packaging and the runtime you already own | not applicable | yours to get right |
-
-The rows that say `same` are why this is one pack and not two.
-
-### Where to start, per track
-
-**Everything built so far is shared by both tracks.** Phase 1 delivered the
-harness, the governed route and the gates, and none of it is track-specific — so
-today the first move is identical either way, and nothing is skipped by taking
-it:
-
-| | Do this now | Arrives in Phase 2 | Phase 3 document |
-|---|---|---|---|
-| **Track A** | [Start here](#start-here) | `track-a-app/`, with `app.yaml`, `tests/e2e/` and `tests/security/` | 09, *Databricks Apps to a Production Standard* |
-| **Track B** | [Start here](#start-here) | `track-b-service/` | 10, *Off-Platform Engineering with Databricks-Hosted Models* |
-
-`track-a-app/` and `track-b-service/` are required paths in `repo-manifest.yml`,
-each recorded against the phase that produces it, so a release claiming Phase 2
-while either is absent fails the gate. The two documents are entries in the
-21-document plan on the [documentation site](#documentation-site) and are **not**
-gate-enforced paths. A plan is a plan, and saying which of the two you are
-looking at is the difference between a roadmap and a promise.
+**Both tracks share the same first thirty minutes.** The split only starts to matter
+once you are productive, which is why the setup path does not ask you to choose.
 
 ## Why you should care
 
-Coding agents got good enough to use on production systems faster than most
-engineering organisations got a position on them. The result is a predictable
-shape of failure, and it is rarely the one people worry about:
+Three things go wrong quietly when a team starts using coding agents, and all three are
+invisible until someone goes looking:
 
-| The worry | What actually happens |
-|---|---|
-| "The agent will write bad code." | Reviewers catch bad code. What they do not catch is **code nobody read**, because it was generated in bulk, looked plausible, and the diff was large enough that reviewing it properly felt optional. |
-| "The agent will delete something." | Occasionally. Far more often it does something *ordinary and irreversible* — a force-push, a published package, a deployment — because no tier ever said that action was different from editing a file. |
-| "Costs will run away." | They do, but silently and without attribution. Nobody can say which team, project or session spent it, so the response is a blanket restriction rather than a decision. |
-| "It will leak secrets." | The usual leak is not dramatic: a credential file read by a helper process that runs outside every boundary anyone configured, because nobody checked where that helper runs. |
-| "Tests will be stubs." | They will. `assert response.status_code == 200` against a mock is the default output of asking for a test, and it passes forever, including after the feature breaks. |
+1. **Spend with no owner.** Every session is model spend. Without a governed route and
+   request tags, the bill arrives as one number and nobody can attribute it to a team, a
+   project or a purpose.
+2. **Tools with no governance.** An MCP server registered directly is subject to Unity
+   Catalog permissions but invisible to the gateway — no usage row, no rate limit. The
+   two routes look almost identical and only one of them is observable.
+3. **A permission model that reads well and enforces nothing.** Most harness
+   configuration formats have an allow list and a deny list. The interesting tier is the
+   middle one, and three of the five harnesses here cannot express it.
 
-None of those is solved by choosing a better model. They are solved by rails:
-one route, three tiers, real tests, and evidence instead of adjectives. That is
-what this pack is.
-
-**The bar it sets:** a team of five engineers who have never used a coding agent
-seriously can spend one day on this material and end it with a governed harness,
-a passing gate, and one small change shipped with evidence attached to the pull
-request. That bar is written down as success test `st-1` in
-`release-readiness.yml`, along with the three others — and all four are recorded
-as `not-run`, because they are closed by people and no cohort has run them yet.
-
-## Where this actually is
-
-This section exists so that nobody plans around work that has not happened. It
-is generated from `repo-manifest.yml` and `release-readiness.yml`, which
-`make check` validates on every run.
-
-```
-Phase 0  manifests, schemas, verified sources, enforced checks     complete
-Phase 1  the reference harness, implemented end to end             complete   <- you are here
-Phase 2  reference application (Track A) and service (Track B)     not started
-Phase 3  the 21 documents and the PDF release                      not started
-Phase 4  the labs                                                  not started
-Phase 5  the validation kit                                        not started
-Phase 6  the portable gate, CHANGELOG, handover                    not started
-```
-
-What is real today, with the number that says so:
-
-| Built and checked | Figure |
-|---|---|
-| Hermetic checks in `make check` — no network, no credentials | **22 checks, 0 failed, 4 warned** (the four warnings name Phase 5 files that do not exist yet, by design) |
-| Planted defects the validator's self-test must catch | **16 planted, 16 caught** |
-| Permission-guard verdict cases | **46 cases (27 deny, 19 allow), 6 of 6 guard rules exercised** |
-| Load-bearing external claims, each with its source and method | **40 claims — 38 verified, 2 verified-absent** |
-| Public sources checked and pinned | **52 candidates, 51 reachable, 50 cited** |
-| Assertions run against a live workspace | **13 passed, 0 failed, 0 inconclusive** |
-| Harnesses implemented | **1 of 5** — Claude Code. The other four are labelled, not implemented |
-
-What is **not** here yet, stated plainly:
-
-- **The 21 documents.** `release-readiness.yml` lists every one of them with
-  `status: planned`. `make docs` currently reports "source not written yet" for
-  all of them. There is no PDF release.
-- **The two reference applications.** No Track A app, no Track B service, no
-  `databricks.yml`, no `scripts/new-project.sh`.
-- **The labs.** The guided path from zero to capable does not exist yet.
-- **The validation kit.** Three of the four success tests are closed by people,
-  and the written protocols they need are Phase 5.
-- **A verified container boundary.** `.devcontainer/` is a *verified recipe and
-  not a verified environment*: no container runtime was found on the machine the
-  harness was verified on, so that layer has never been exercised. Tracked as
-  gap `g-container-runtime`, and it is published rather than papered over.
-- **Proof that a session's model traffic went through the gateway.** The route is
-  proved over HTTP, including with a negative control. Where a *session* sends
-  its traffic is a different question, and the finding about environment
-  variables below is why.
-
-## Start here
-
-Three doors, by how much time you have. None of them needs a Databricks
-workspace except the third.
-
-### Sixty seconds — is this machine ready?
-
-```sh
-make doctor
-```
-
-A table of what this machine has against what the pack was exercised with,
-designed to be pasted into a ticket. It never prints your workspace URL — only
-whether it is set — because a workspace URL is an environment identifier.
-
-### Ten minutes — run every check, then read the diff
-
-```sh
-make deps          # optional: a pinned virtualenv, so the checks do not depend
-                   # on whatever your system python happens to have
-make check         # hermetic. No network, no credentials, no workspace.
-make help          # every target, one line each
-```
-
-`make check` is the gate. If it passes on your laptop it passes anywhere,
-because it reaches nothing. Then change one line in `harness/shared/` and run:
-
-```sh
-make harness-generate
-git diff
-```
-
-**That diff is the review of a policy change.** The generated harness
-configuration is never hand-edited; `make harness-verify` fails the build if
-anyone does, and it distinguishes "the policy moved and nobody regenerated" from
-"someone edited the output", because those look identical in a diff and mean
-opposite things.
-
-### A day — launch a governed session and watch it refuse something
-
-```sh
-databricks auth login --profile your-profile     # you run this, once
-./harness/claude-code/launch.sh --explain        # resolve, probe, print, do nothing
-./harness/claude-code/launch.sh
-```
-
-`--explain` turns "the model is erroring" into "this workspace does not expose
-that route", which is a different conversation with a different person. Run it
-first on any new machine.
-
-Then prove the whole thing against your own workspace:
-
-```sh
-make harness-verify-sandbox PROFILE=your-profile
-```
-
-Thirteen assertions in five stages — that the files under test are the
-generator's output, that a token can be minted, that a real model call goes
-through the governed route **and that the same call with an invalid token is
-refused**, where the MCP header helper actually runs, and that the
-never-automatic tier refuses inside a live session and journals which rule
-fired. It writes `harness/evidence/verify-in-sandbox.md` with the workspace host
-reduced to a shape, and it runs its sessions in a scratch project with its own
-config directory, then asserts afterwards that **your own harness state was
-neither modified nor given an entry**.
-
-> **Accept the trust dialog once per clone.** Until you do, every
-> `permissions.allow` entry is silently discarded and the session queries every
-> routine command. Deny rules and hooks keep working, so nothing is less safe —
-> it just looks broken. Starting a session interactively in the directory once
-> is enough.
+None of that is solved by a document telling people to be careful. It is solved by a
+configuration that ships, a probe that runs on your workspace rather than ours, and a
+check that fails.
 
 ## The four ideas
 
@@ -265,46 +117,53 @@ spend, attribution and refusal are all observable at once.
 
 ```mermaid
 flowchart LR
-  subgraph clients["Harnesses and tools"]
-    A["Claude Code<br/>(implemented)"]
-    B["Four other harnesses<br/>(labelled, not implemented)"]
-    C["Track A app"]
-    D["Track B service"]
+  subgraph clients["Harnesses"]
+    A["Claude Code · Codex · OpenCode<br/>(model traffic governed)"]
+    B["Cursor · Copilot CLI<br/>(MCP only)"]
   end
   GW{{"Unity AI Gateway<br/>one route, request-tagged"}}
   A --> GW
   B --> GW
-  C --> GW
-  D --> GW
   GW --> M["Model serving"]
   GW --> MCP["Governed MCP services"]
-  GW -.->|"usage, tagged by<br/>team / project / run"| U[("Usage tables")]
-  X["Untagged or unrouted call"] -.->|refused| GW
+  GW -.->|"usage, tagged by<br/>team / project / purpose"| U[("system.ai_gateway.usage")]
 ```
 
-The uncomfortable finding this produced, recorded in the evidence file and worth
-reading before you rely on the diagram: **a session started with gateway
-environment variables is not proof that the gateway served it.** During this
-build, a session started with a deliberately invalid gateway token answered
-normally — it had fallen back to the ambient harness login. Client-side
-environment variables are a default, not a control. Enforce the route with
-managed settings on the machine, and verify from the gateway side using the
-usage tables filtered on the request tags. Every launch in this pack sets those
-tags for exactly that reason.
+Only `{workspace}/ai-gateway/mcp-services/{catalog.schema.name}` passes through the
+gateway. The `{workspace}/api/2.0/mcp/...` route is governed by Unity Catalog but
+invisible to the gateway: no usage row, no rate limit. Both work; only one is
+observable. [`docs/03-gateway-auth.md`](docs/03-gateway-auth.md) has the distinction in
+full.
 
-Registering MCP servers is not free either, so it is measured rather than
-argued about:
+**Two findings worth reading before you rely on the diagram.**
+
+A session started with gateway environment variables is not proof that the gateway
+served it. During this build, a session started with a deliberately invalid gateway
+token answered normally — it had fallen back to the ambient harness login. Client-side
+environment variables are a default, not a control. Verify from the gateway side, using
+the usage tables filtered on the request tags. Every launcher here sets those tags for
+exactly that reason.
+
+And **route availability is per workspace, not per product.** On the build workspace the
+Anthropic route answered 200, the Codex route 404 and the Gemini route 400. That is why
+every generated `launch.sh` probes rather than assumes:
+
+```sh
+./harness/<name>/launch.sh --explain     # probe the route, print what it found, run nothing
+```
+
+Registering MCP servers is not free either, so it is measured rather than argued about:
 
 ```sh
 make tool-budget         # offline: reports a LOWER BOUND, and says so
 make tool-budget-live    # measures what the server actually advertises
 ```
 
-Every registered tool costs context in every session whether or not it is
-called. The live mode also compares the allowlist against what the server
-advertises **in both directions**, because a tool advertised but not allowed is
-context spent on nothing, and a tool allowed but not advertised is a policy line
-that constrains nothing while reading as though it does.
+Every registered tool costs context in every session whether or not it is called. The
+live mode also compares the allowlist against what the server advertises **in both
+directions**, because a tool advertised but not allowed is context spent on nothing, and
+a tool allowed but not advertised is a policy line that constrains nothing while reading
+as though it does.
 
 ### Three tiers
 
@@ -314,270 +173,205 @@ that constrains nothing while reading as though it does.
 |---|---|---|
 | **auto-allow** | Worst outcome is a wasted minute and a dirty working tree. Reversible with `git`, touches nothing outside the repository. | Permission rules |
 | **ask** | The action leaves the machine or becomes visible to someone else. A prompt costs seconds; an unreviewed push costs a conversation. | Permission rules |
-| **never-automatic** | No approval flow should make this routine, because the failure is not recoverable by the person who approved it. | Permission rules **and** a guard script that journals every decision |
+| **never-automatic** | No approval flow should make this routine, because the failure is not recoverable by the person who approved it. | Permission rules **and**, where the harness supports it, a guard script that journals every decision |
 
-Sessions default to the mode that asks before acting. The three defaults behind
-the tiers: read-only unless a write is explicitly enabled; fail safe, holding
-rather than proceeding on low confidence or error; and every automated decision
-journalled so it can be reviewed and overridden.
+Sessions default to the mode that asks before acting. The middle tier is the one that
+does the work, and it is the one most likely to be missing: an allow list plus a deny
+list has no way to say "this is fine, but tell me first".
 
-The last tier is deliberately enforced twice, and the reason is the whole design
-in one sentence: **a pattern that matches leaves no record, and a guard can
-write one.** Four mechanisms carry the load, and they fail independently, so a
-reader should know which one they are relying on:
+The last tier is deliberately enforced twice where it can be, and the reason is the
+whole design in one sentence: **a pattern that matches leaves no record, and a guard can
+write one.** Which mechanism you are relying on depends on your harness:
 
 | Mechanism | Enforces | Defeated by |
 |---|---|---|
 | Permission rules | The canonical spelling of each tier | An unusual spelling of the command |
-| The guard script | The never-automatic tier, on normalised text, with a journal entry | The action expressed as data: base64, a written-then-run script, a runtime's own process API |
-| The sandbox block | Reads of credential paths, egress to unlisted hosts, the unsandboxed retry | A platform with no sandbox — which is why it is configured to fail at startup rather than downgrade silently |
-| The container | Everything above, at OS level, on a filesystem holding none of your credentials | Being a verified recipe and not yet a verified environment — see `g-container-runtime` |
+| The guard script (Claude Code) | The never-automatic tier, on normalised text, before the command runs, with a journal entry | The action expressed as data: base64, a written-then-run script, a runtime's own process API |
+| Posture and review (Codex) | Nothing automatically. The tier is written into `AGENTS.md` | Nobody reading the diff |
+| A deny list (Cursor, OpenCode, Copilot CLI) | The tier as a refusal, with no journal | An unusual spelling, and in Cursor's case the absence of a middle tier |
 
-None of these solves prompt injection. Every one of them limits the blast radius
-of an injection that has already succeeded. And the permission rules are not a
-security boundary: they are the difference between an accident and a deliberate
-act. `harness/shared/boundary.yml` is where capability is actually removed.
+None of these solves prompt injection. Every one of them limits the blast radius of an
+injection that has already succeeded. And the permission rules are not a security
+boundary: they are the difference between an accident and a deliberate act.
 
 Prove it rather than trusting it:
 
 ```sh
 make harness-deny-proof    # 46 cases against the guard's verdict table
-make boundary-proof        # attempt what the boundary forbids, report what refused
 ```
 
-`make boundary-proof` run from a normal terminal reports `ALLOWED` almost
-everywhere, and **that is the correct result** — it is what no boundary looks
-like, which is worth seeing once. It has three verdicts, not two, and the third
-is what keeps it honest: `INCONCLUSIVE` is never counted as a pass, because "the
-credential file could not be read" and "there is no credential file" look
-identical from inside and mean opposite things.
+Forty-six cases: 27 that must be denied, 19 that must be allowed, every guard rule
+exercised at least once. A verdict table with an unexercised rule is a rule nobody has
+checked.
 
 ### Evidence, not adjectives
 
 ![One thick frosted-glass card bearing a raised lava-red wax seal, its face an ornamental pattern of concentric rings and radial ticks with no emblem; three thinner blank cards lean behind it out of focus, and a taut red filament runs from the base of the seal across the surface into the glowing slot of a small navy anodised enclosure](docs/assets/img/evidence-not-promises.jpg)
 
-Every factual claim about an external system has a row in
-`claims-ledger.json` naming its source, the method used to verify it, the date,
-and the documents that rely on it. Forty rows today. Two of them have status
-`verified-absent`: we checked, the source does not say it, and the absence is
-the finding.
+Every source behind a claim is listed in [`docs/SOURCES.md`](docs/SOURCES.md) with the
+URL, the HTTP status it returned and the date it was read — including the four
+candidates that were **excluded**, and why.
 
-Claims expire. `make reverify` lists every row past its re-verification interval
-and then checks the sources live, so a stale claim becomes a build warning
-rather than a sentence that quietly stopped being true. The validator also fails
-the build if any file cites a claim id that no longer exists — which found four
-dangling citations the first time it ran, all of which had been reading as
-reassurance.
+Two words are used carefully, and they are not synonyms:
 
-The same rule applies to the pack's own claims about itself.
-`release-readiness.yml` records, for each success test, what implements it, what
-checks it, who owns it, the exact revision a result came from, and the result.
-`make check` rejects any row marked `passed` whose recorded revision is not the
-current `HEAD`. Read the result column literally:
-
-| Value | Means |
+| Word | Means |
 |---|---|
-| `passed` | Run against that revision, by that verifier, with the listed evidence. Both are required for this value. |
-| `failed` | Run, and did not meet the stated bar. |
-| `not-run` | Not attempted against this revision. **Not a soft pass.** The notes say who has the authority it needs and what the next action is. |
-| `expired` | Passed against an older revision and not re-run. Treated as unproven. |
+| **verified** | A real call over that route returned 200 during the build. |
+| **documented** | The route was probed and the behaviour is described by a source, but nothing was exercised. |
 
-All four success tests are `not-run` today, and the pack is `PREVIEW` rather
-than `RELEASE-READY` because of it. A PREVIEW may not be advertised as
-production-ready.
+The second is used more often than the first, and every generated `RENDER-NOTES.md`
+closes with a "what is not proved" section rather than leaving the reader to infer it.
+The same applies to the checks: a check that cannot run exits non-zero rather than
+reporting a pass it has not earned. `verify.sh` exits 2 when no sha256 tool exists,
+because "nothing to check" and "everything checks out" are different results.
 
 ### One entry point
 
-Two ways to run the checks means one of them rots. So every check a human runs
-and every check a pipeline runs is a target in the `Makefile`. **If CI does
-something the `Makefile` cannot do, that is a defect in the `Makefile`.**
-
-The split that matters:
+Two ways to run the checks means one of them rots. So every check a human runs and every
+check a pipeline runs is a target in the `Makefile`. **If CI does something the
+`Makefile` cannot do, that is a defect in the `Makefile`.**
 
 | Command | Needs | Belongs in |
 |---|---|---|
 | `make check` | Nothing. No network, no workspace, no credentials. | The pull-request lane. A check that can fail because someone else's web server is down does not belong here. |
-| `make check-live` | Network, and a workspace for some rows. | A scheduled lane. Failures here are news about the world, not about the change under review. |
+| `make check-live` | Network, and a workspace. | A scheduled lane, or a manual run. Failures here are news about the world, not about the change under review. |
 
 ## How the gate is enforced
 
-**The gate is a script, not a workflow file.** `ci/run.sh <lane>` — one POSIX
-`sh` entry point, taking a lane name, with no dependency on any forge, any
-runner image or any environment variable a forge supplies. It runs on a laptop.
-Every lane named under `automated_checks` in `release-readiness.yml` is a lane of
-that script and nothing else.
+**The gate is a command, not a workflow file.** `make check` runs `lint`, `links`,
+`harness-verify` and `test`, then the tool budget, and exits non-zero on the first
+failure. It needs no network, no credentials and no workspace, so it runs identically on
+a laptop and in whatever runner you already have.
 
-This is deliberate, and it is recorded with its cost in
-[decision 0005](docs/DECISIONS/0005-forge-agnostic-gate.md). The immediate reason
-is that **the destination this pack is delivered into runs no GitHub Actions** —
-a common situation, alongside a self-hosted forge with Actions disabled, GitLab,
-Azure DevOps, and a mirrored read-only remote. The better reason is that a pack
-whose enforcement lives in `.github/workflows/` teaches its readers that CI is a
-GitHub feature. The lesson worth teaching is that the gate is a command, and CI
-is whatever happens to invoke it.
+This repository ships **no workflow file at all** — not a disabled one, not an example
+one. Recorded with its cost in
+[decision 0005](docs/DECISIONS/0005-the-gate-is-a-command.md). The immediate reason is
+that the destination this pack is delivered into runs no GitHub Actions, which is a
+common situation alongside a self-hosted forge with Actions disabled, GitLab, Azure
+DevOps and a mirrored read-only remote. The better reason is that a pack whose
+enforcement lives in `.github/workflows/` teaches its readers that CI is a GitHub
+feature. The lesson worth teaching is that the gate is a command, and CI is whatever
+happens to invoke it.
 
-```mermaid
-flowchart TD
-  RUN["ci/run.sh &lt;lane&gt;<br/>the gate"]
-  MK["make check<br/>hermetic"]
-  RUN --> MK
-  DEV["A laptop<br/>anyone, any time"] --> RUN
-  HOOK["scripts/install-hooks.sh<br/>pre-push, opt-in"] --> RUN
-  AD["ci/adapters/ — optional, one line each"] --> RUN
-  AD -.- A1["a forge workflow"]
-  AD -.- A2["a Databricks Job,<br/>when the platform is the only compute"]
+In your own repository, the porting exercise is one line:
+
+```yaml
+- run: make check
 ```
 
-Three things attach to it, in descending order of how much is relied on them:
-
-1. **`make check`** is what the pull-request lane runs. Already hermetic, which
-   is why the split is cheap.
-2. **`scripts/install-hooks.sh`** installs a `pre-push` hook running the same
-   lane locally. Opt-in and removable on purpose: a hook nobody can bypass is a
-   hook people avoid by not pushing.
-3. **`ci/adapters/`** holds thin, optional invocations for forges that do have
-   runners, plus a Databricks Job definition for teams whose only reliable
-   compute is the platform itself. Each is a handful of lines whose entire body
-   is `ci/run.sh <lane>`. They are examples to copy, not required paths.
-
-**The honest cost, not dressed up:** on a forge with no runner, nothing blocks a
-push. The gate is then a pre-push hook and a review checklist, both of which one
-person in a hurry can skip. That is weaker than a required status check and the
-pack says so here rather than implying a coverage it does not have. Where the
-platform is the only available compute, the Databricks Job adapter is the
-strongest option available, and it is a scheduled verdict rather than a blocking
-one.
-
-`ci/run.sh` and `scripts/install-hooks.sh` are Phase 6 and are **not written
-yet**. `make check` — the thing they will invoke — works today.
+**The honest cost, not dressed up:** here, nothing blocks a push. The gate is a command
+a developer runs and a reviewer can ask about, which is weaker than a required status
+check because both can be skipped by one person in a hurry. Said here rather than
+implying a coverage that does not exist.
 
 ## What is in this repository
 
 ```
 Makefile                    the one entry point. `make help` lists everything
-repo-manifest.yml           every required path, which phase creates it, and what
-                            breaks without it. `make check` enforces this
-release-readiness.yml       the traceability spine: 21 documents, 4 success tests,
-                            each with owner, revision tested and literal result
-claims-ledger.json          40 external claims, each with source, method and expiry
-sources.yml                 52 public sources checked, pinned and dated
-quality-attributes.yml      the non-functional targets, with the one that has no
-                            exception path
 template-version.yml        the versions this pack was exercised against, read by
-                            `make doctor` rather than restated in it
+                            doctor.sh and build-docs.py rather than restated in them
 
 harness/
   shared/                   the policy, once, in a neutral vocabulary:
-                            permissions, gateway, mcp, boundary, guards
-  claude-code/              the one implemented harness. Generated from shared/,
-                            never hand-edited; `make harness-verify` enforces that
-  codex/ cursor/            labelled, not implemented. The label is the honesty
-  copilot-cli/ opencode/
-  scripts/                  the renderer, the drift checker, the proof scripts
-  evidence/                 what was actually run against a live workspace, and
-                            what it deliberately did not prove
-  PROMOTION.md              what a labelled harness must satisfy to be implemented
+                            permissions.yml, gateway.yml, mcp.yml, guards/
+  claude-code/  codex/      one directory per harness. Generated from shared/ and
+  cursor/  copilot-cli/     never hand-edited, except the hand-written SETUP.md.
+  opencode/                 verify.sh enforces that. RENDER-NOTES.md says what each
+                            harness cannot express
+  scripts/                  render.py, generate.sh, verify.sh, deny-proof.sh
 
 scripts/
-  validate-manifests.py     every manifest check, plus a self-test that plants
-                            16 defects and requires all 16 to be caught
   doctor.sh                 machine report. POSIX sh, so it works when python does not
   link-check.sh             internal links, anchors and link text. Also POSIX sh
   tool-budget.py            what the MCP configuration costs in context
-  build-docs.py             the PDF pipeline, built twice and compared byte for byte
+  build-docs.py             the PDF pipeline, with an overflow check that fails the build
 
 docs/
-  DECISIONS/                five decision records, each with its rejected
+  00-start-here.md          … 05-ci-test-docs.md — the six documents
+  SOURCES.md                every URL, its status code, and the date it was read
+  DECISIONS/                four decision records, each with its rejected
                             alternatives and the condition that should reopen it
-  theme/                    the PDF theme, proved by rendering a specimen
+  theme/pack.typ            the PDF theme
   assets/img/               the illustrations, and a note on how they were made
   index.md                  the documentation site homepage
-  (21 documents)            Phase 3. Not written yet
-
-schemas/                    JSON Schema for every manifest, with valid and
-                            invalid fixtures that the self-test uses
-.devcontainer/              the execution boundary. A verified recipe, not yet a
-                            verified environment
 ```
 
-Two files worth opening even if you read nothing else:
-`harness/evidence/verify-in-sandbox.md`, because it is the only page in the pack
-that is entirely things that happened; and `docs/DECISIONS/README.md`, because
-it states that an agent may draft a decision record but a human owns the
-decision, and why that rule exists.
+Two files worth opening even if you read nothing else: your harness's
+`RENDER-NOTES.md`, because it is the only page that is entirely about what your setup
+cannot do; and [`docs/DECISIONS/README.md`](docs/DECISIONS/README.md), because it states
+that an agent may draft a decision record but a human owns the decision, and why that
+rule exists.
 
 ## Documentation site
 
 **<https://althrussell.github.io/databricks-agentic-engineering-rails/>**
 
-Published with plain GitHub Pages, built from `main` and the `/docs` folder. **No Actions, no build step, no workflow file** — the same
-constraint that shaped the gate. Configuration is `docs/_config.yml`, the
-homepage is `docs/index.md`, and every page is a Markdown file that renders
-correctly in a plain text editor, on GitHub, and on the site.
+Published with plain GitHub Pages, built from `main` and the `/docs` folder. **No
+Actions, no build step, no workflow file** — the same constraint that shaped the gate.
+Configuration is `docs/_config.yml`, the homepage is `docs/index.md`, and every page is a
+Markdown file that renders correctly in a plain text editor, on GitHub, and on the site.
 
-The PDF release is a separate artifact, built by `make docs` from the same
-Markdown, and reproducible: `make docs-repro` builds twice and fails unless the
-output is byte-identical. PDFs are release artifacts published on a tag, not
-committed on every edit — a binary that changes on every build makes every diff
-useless.
+The PDFs are a separate artifact, built by `make docs` from the same Markdown. They are
+not committed: a binary that changes on every build makes every diff useless.
 
-One thing worth knowing before you fork: **plain Pages needs the repository to
-be public**, unless you have GitHub Enterprise Cloud. This repository was private
-first, and enabling Pages returned `422 Your current plan does not support GitHub
-Pages for this repository` — a plan limit, not a configuration mistake, and not
-obvious from the error. If neither option is open to you nothing is lost: every
-document is Markdown in `docs/`, readable in place, and `make docs` produces the
-PDFs.
+One thing worth knowing before you fork: **plain Pages needs the repository to be
+public**, unless you have GitHub Enterprise Cloud. This repository was private first, and
+enabling Pages returned `422 Your current plan does not support GitHub Pages for this
+repository` — a plan limit, not a configuration mistake, and not obvious from the error.
+If neither option is open to you nothing is lost: every document is Markdown in `docs/`,
+readable in place, and `make docs` produces the PDFs.
 
 ## What this does not do
 
 Stated here rather than discovered later.
 
-- **It does not solve prompt injection.** Every mechanism limits blast radius.
-  None prevents an injection.
-- **It does not make the permission rules a security boundary.** They are the
-  difference between an accident and a deliberate act.
-- **It does not touch your live configuration.** No script here writes to your
-  harness configuration directories or a managed settings file. `launch.sh` will
-  use an installed credential helper when one is present, which does write
-  user-scope configuration; it says so before doing it, and there is a
-  documented way to avoid it entirely.
-- **It does not claim the four labelled harnesses work.** They are labelled, and
-  `harness/PROMOTION.md` states what promotion requires. A label is not a
-  roadmap promise.
-- **It does not claim portability it has not tested.** `docs/PORTABILITY.md`
-  (Phase 3) is where verified scope is separated from aspiration, and the CI
-  adapters will be listed there under what was *not* tested.
-- **It is not a Databricks product.** See `DISCLAIMER.md`. Nothing here is
-  supported software, and every reference is to public documentation, recorded
-  in `sources.yml` with the date it was read.
+- **It does not solve prompt injection.** Every mechanism limits blast radius. None
+  prevents an injection.
+- **It does not make the permission rules a security boundary.** They are the difference
+  between an accident and a deliberate act.
+- **It does not sandbox anything.** Sandboxes and containers are out of scope. This
+  configures the harness you are already running on the laptop you already have.
+- **It does not touch your live configuration.** No script here writes to your harness
+  configuration directories or a managed settings file. Each `SETUP.md` tells you which
+  file to copy where, and you copy it.
+- **It does not claim the five harnesses are equivalent.** Two of them do not route
+  model traffic through the gateway and one cannot express the never-automatic tier at
+  all. That is in the table at the top, not in a footnote.
+- **It does not claim portability it has not tested.** Only OpenTofu was exercised for
+  infrastructure-as-code; Terraform parity is untested. `macOS` is the only platform the
+  checks were run on.
+- **It is not a Databricks product.** See [`DISCLAIMER.md`](DISCLAIMER.md). Nothing here
+  is supported software, and every reference is to public documentation, recorded in
+  [`docs/SOURCES.md`](docs/SOURCES.md) with the date it was read.
 
 ## Contributing
 
-Read `docs/DECISIONS/README.md` first — the format, and the rule about who owns
-a decision. Then:
+Read [`docs/DECISIONS/README.md`](docs/DECISIONS/README.md) first — the format, and the
+rule about who owns a decision. Then:
 
 ```sh
 make check          # must pass. It is hermetic, so there is no excuse
-make selftest       # the manifest checks, checked against planted defects
 ```
 
-Three rules that are enforced rather than requested:
+Two rules that are enforced rather than requested:
 
 1. **Never hand-edit a generated file.** Change `harness/shared/`, run
-   `make harness-generate`, review the diff.
-2. **A new factual claim about an external system needs a row in
-   `claims-ledger.json`** with its source, method and the documents relying on
-   it. A file citing a claim id that does not exist fails the build.
-3. **A new required path needs a `repo-manifest.yml` entry saying which phase
-   creates it and what breaks in its absence.** "Why this file exists" is not
-   documentation overhead; it is the thing nobody can reconstruct later.
+   `make harness-generate`, review the diff. That diff *is* the review of the policy
+   change. `make harness-verify` distinguishes "the policy moved" from "someone edited
+   the output", because those look identical in a diff and mean opposite things.
+2. **A new claim about an external system needs a row in
+   [`docs/SOURCES.md`](docs/SOURCES.md)** with the URL, the status it returned and the
+   date. A claim that cannot name its source does not go in.
 
-Commits are signed off in the usual way for this repository. The images in
-`docs/assets/img/` are decorative and generated; if you fork this for your own
-organisation, replace them, and keep the note explaining how.
+A note on the checks themselves: each one has been run against a planted defect to prove
+it fails. A checker that has only ever been seen passing is a checker nobody has tested.
+If you add one, plant a defect and show it caught.
+
+The images in `docs/assets/img/` are decorative and generated; if you fork this for your
+own organisation, replace them, and keep the note explaining how.
 
 ## Licence
 
-Code and documentation are licensed under the terms in `LICENSE`. Third-party
-notices are in `NOTICE`. `DISCLAIMER.md` states what this is not.
+Code and documentation are licensed under the terms in [`LICENSE`](LICENSE). Third-party
+notices are in [`NOTICE`](NOTICE). [`DISCLAIMER.md`](DISCLAIMER.md) states what this is
+not.

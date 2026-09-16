@@ -48,8 +48,8 @@ plugins:
 
 # Not part of the site.
 #
-#   theme/            the PDF theme: a Typst template and a specimen that exists
-#                     to be rendered by `make docs`, not read in a browser.
+#   theme/            the PDF theme: a Typst template used by `make docs`, not
+#                     read in a browser.
 #   README.md         the docs/ directory has no README; this line is a guard for
 #                     one being added later as a note to editors rather than as a
 #                     page.

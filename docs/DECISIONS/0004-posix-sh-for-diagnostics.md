@@ -7,12 +7,12 @@
 
 `make check` and `make doctor` are the two commands a new reader runs first, and
 the two a stuck reader runs when something is wrong. Both therefore have to work
-in the least hospitable environment the pack asks anyone to use: inside the
-execution boundary (0002), and in whatever CI image a team already has.
+in the least hospitable environment the pack asks anyone to use: a laptop that has
+just been set up, and whatever CI image a team already has.
 
-`scripts/validate-manifests.py` and `scripts/build-docs.py` are Python and need
-to be — they parse YAML, validate JSON Schema and drive pandoc. Adding a third
-and fourth Python script looked like consistency.
+`harness/scripts/render.py` and `scripts/build-docs.py` are Python and need to be —
+they parse YAML, emit JSON and drive pandoc. Writing the doctor and the link
+checker in Python too looked like consistency.
 
 The problem is what happens when the interpreter is the fault. A doctor written
 in Python cannot report a broken or absent Python, and that is the single most
@@ -37,11 +37,11 @@ environment identifier.
 ## Consequences
 
 - Two languages in `scripts/`, with a rule for which is which: anything that has
-  to run when the environment is broken is `sh`; anything that parses a manifest
-  is Python. The rule is stated here so the next script does not get its language
+  to run when the environment is broken is `sh`; anything that parses YAML or
+  emits JSON is Python. The rule is stated here so the next script does not get its language
   chosen by coin flip.
 - `link-check.sh` resolves relative paths and heading anchors with `sed` and
-  `awk`, including collapsing `docs/../schemas/README.md` to `schemas/README.md`
+  `awk`, including collapsing `docs/../harness/README.md` to `harness/README.md`
   so an error names a path a reader can act on. This is more code than the Python
   equivalent, and it is the cost being accepted deliberately.
 - Both scripts count their own verdicts from captured output, because every check

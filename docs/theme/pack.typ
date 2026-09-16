@@ -7,11 +7,10 @@
 // New Computer Modern, New Computer Modern Math, DejaVu Sans Mono - and the build
 // passes --ignore-system-fonts. That is what makes a PDF built on a laptop
 // byte-identical to one built in CI: a theme that reaches for a system font
-// produces a different artifact on every machine, and then a checksum in the
-// release manifest proves nothing.
+// produces a different artifact on every machine, and then the digest printed by
+// the build describes when it ran rather than what it built.
 //
 // Rendered by: scripts/build-docs.py (make docs)
-// Visual test page: docs/theme/theme-specimen.md
 
 $if(highlighting-definitions)$
 $highlighting-definitions$
@@ -239,9 +238,9 @@ $if(status)$
 )[
   #set text(8.5pt)
   *Read the status.* This document carries the status shown above. A #smallcaps[preview]
-  is honestly incomplete: rows in `release-readiness.yml` marked `not-run` have not
-  been run, and the reasons are stated there rather than implied here. Nothing in
-  this pack is official Databricks documentation; see `DISCLAIMER.md`.
+  is honestly incomplete, and each document says which of its claims were exercised
+  and which were only read. Nothing in this pack is official Databricks
+  documentation; see `DISCLAIMER.md`.
 ]
 $endif$
 

@@ -49,9 +49,9 @@ USAGE
 done
 
 # ---------------------------------------------------------------- recorded ----
-# Pull "version" out of one block of template-version.yml. Reading the recorded
-# value from the same file that new-project.sh stamps into generated projects keeps
-# one source of truth; hard-coding the numbers here would give two.
+# Pull "version" out of one block of template-version.yml. One file records what
+# this pack was built and tested against; hard-coding the numbers here would give
+# two places to change and one of them would eventually be wrong.
 recorded() {
   [ -f "$VERSIONS" ] || { printf '(no record)'; return; }
   awk -v key="$1" '
@@ -128,17 +128,6 @@ fi
 UG_FOUND=$(printf '%s' "$UG_RAW" | sed 's/.*[Vv]ersion //; s/^v//; s/^[^0-9]*//')
 add "ug" optional "${UG_FOUND:-}" "$(recorded unity_gateway_cli)" "report this string verbatim in bug reports"
 
-# A container runtime is what makes the execution boundary a boundary rather than a
-# scratch HOME. Absent is a supported state with a published residual risk, so this
-# is a warning with a pointer, not a failure.
-RUNTIME=""
-for candidate in docker podman finch nerdctl; do
-  if command -v "$candidate" >/dev/null 2>&1; then
-    RUNTIME="$candidate $(probe "$candidate" --version)"
-    break
-  fi
-done
-add "container runtime" optional "${RUNTIME:-}" "" "see docs/DECISIONS/0002-execution-boundary.md"
 
 # ------------------------------------------------------------ environment -----
 # Set or unset. Never the value: this output is meant to be pasted.
@@ -197,7 +186,7 @@ else
   [ -n "$UG_RAW" ] && printf '    ug --version                %s\n' "$UG_RAW"
   printf '\n'
   if [ "$REQUIRED_MISSING" -gt 0 ]; then
-    printf '  %d required tool(s) missing. See docs/PREREQUISITES.md for how to install them.\n\n' "$REQUIRED_MISSING"
+    printf '  %d required tool(s) missing. See docs/01-prerequisites.md for how to install them.\n\n' "$REQUIRED_MISSING"
   else
     printf '  Every required tool is present. `make check` and `make docs` should run.\n\n'
   fi

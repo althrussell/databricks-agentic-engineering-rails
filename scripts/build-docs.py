@@ -1,32 +1,25 @@
 #!/usr/bin/env python3
-"""Build the PDF pack from Markdown, then record what was built.
+"""Build the PDF pack from the Markdown in docs/.
 
-Run by `make docs`. Every document listed in release-readiness.yml with
-`pdf: true` is rendered through pandoc with typst as the PDF engine and
-docs/theme/pack.typ as the template. The specimen page is always built, because
-the pipeline needs something to prove itself against before the documents exist
-and something to compare against after a theme change.
+Run by `make docs`. Each document in DOCUMENTS below is rendered through pandoc
+with typst as the PDF engine and docs/theme/pack.typ as the template, then all of
+them are rendered again as one combined PDF with a single table of contents.
 
-Two properties this script exists to guarantee:
+The Markdown is the source. The PDFs are a convenience for people who want to read
+or print the pack away from a browser, so a missing pandoc or typst is a reason to
+skip this target and not a reason to distrust the documents.
 
-*   **The artifact names its origin.** Every PDF is recorded in
-    release/release-manifest.json with a full sha256, the commit it was built
-    from, whether the working tree was dirty, and the pandoc and typst versions.
-    A PDF with no manifest row is an untraceable binary.
+Two properties worth knowing about:
 
-*   **The build is reproducible.** Two things are needed for that, and only the
-    first is obvious. typst runs with --ignore-system-fonts, so only the four
+*   **Rebuilds are stable.** typst runs with --ignore-system-fonts, so only the
     fonts typst bundles are available and a machine's own fonts cannot change the
-    output. And SOURCE_DATE_EPOCH is pinned to the commit's own timestamp, because
-    typst otherwise stamps the current time into the PDF and every rebuild
-    produces different bytes - which would make the sha256 in the manifest a
-    record of when the build ran rather than of what it built.
+    output; and SOURCE_DATE_EPOCH is pinned to the commit's own timestamp, because
+    typst otherwise stamps the current time into every PDF and no two builds agree.
+    The --check-reproducible flag builds twice and compares.
 
-    Verify it with `make docs-repro`, which builds twice and compares digests.
-
-The manifest is validated against schemas/release-manifest.schema.json before the
-build is called a success, so a malformed manifest fails here rather than in the
-release workflow.
+*   **Overflow is caught, not tolerated.** Content running past the right text edge
+    fails the build. The tolerance is 4pt, which clears a hanging hyphen and sits
+    well below anything worth shipping.
 """
 
 from __future__ import annotations
@@ -51,8 +44,20 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DOCS = os.path.join(ROOT, "docs")
 THEME = os.path.join(DOCS, "theme", "pack.typ")
 OUT = os.path.join(ROOT, "release")
-SPECIMEN = os.path.join(DOCS, "theme", "theme-specimen.md")
 COMBINED_ID = "databricks-agentic-engineering-rails-pack"
+
+# The pack, in reading order. Listed here rather than found by a glob: the order is
+# editorial, and a glob would silently add a draft or reorder the set the day
+# someone renames a file.
+DOCUMENTS = (
+    ("00-start-here", "Start here"),
+    ("01-prerequisites", "Prerequisites"),
+    ("02-permissions", "Permissions"),
+    ("03-gateway-auth", "Gateway authentication and governance"),
+    ("04-skills-vs-mcp", "Skills versus MCP"),
+    ("05-ci-test-docs", "CI, tests and documentation"),
+    ("SOURCES", "Sources"),
+)
 
 # Paper sizes in millimetres, only the ones the theme is allowed to ask for.
 PAPERS = {"a4": (210.0, 297.0), "us-letter": (215.9, 279.4)}
@@ -61,15 +66,21 @@ MM_PER_PT = 25.4 / 72.0
 # How far a glyph may stick past the text edge before it counts as overflow.
 #
 # It cannot be zero. Justified text with hyphenation lets the hyphen hang into
-# the margin, and the specimen's own worst case is 1.96pt (the word "restruc-"
-# on page 1). Real overflow is not subtle: an unwrapped code line or a table too
+# the margin, and the worst case observed in this pack is 1.96pt (a hyphenated
+# word at a line end). Real overflow is not subtle: an unwrapped code line or a
+# table too
 # wide for the page runs over by tens of points. 4pt sits well clear of the
 # typographic overhang and well below anything worth shipping.
 OVERFLOW_TOL_PT = 4.0
 
 
 class DateSafeLoader(yaml.SafeLoader):
-    """Leave dates as strings; see scripts/validate-manifests.py for why."""
+    """Leave dates as strings.
+
+    PyYAML resolves an unquoted 2026-09-16 to a datetime.date, which then
+    formats differently from what the file says and cannot be compared to a
+    string without a conversion nobody remembers to write.
+    """
 
 
 DateSafeLoader.yaml_implicit_resolvers = {
@@ -164,8 +175,8 @@ def overflow_report(pdf: str) -> tuple[list[str], float]:
     Text bounding boxes are what pdftotext can give us, so this catches the two
     overflows that actually happen — an unwrapped code line and an over-wide
     table — because both carry text. It does not catch a rule or an image that
-    overhangs with no glyph in it; PORTABILITY.md records that limit rather than
-    letting the check imply a guarantee it cannot make.
+    overhangs with no glyph in it. That limit is stated here rather than left for
+    the check to imply a guarantee it cannot make.
     """
     out = subprocess.run(["pdftotext", "-bbox", pdf, "-"],
                          capture_output=True, text=True, check=False)
@@ -201,16 +212,16 @@ def srclabel(src) -> str:
 def fingerprint(pdf: str) -> str:
     """Everything about a PDF that a reader can perceive, and nothing else.
 
-    This is the declared equivalence check of §13, used only when byte-identity
-    fails. Extracted text and per-word bounding boxes together pin the page
+    This is the weaker of the two reproducibility standards, used only when
+    byte-identity fails. Extracted text and per-word bounding boxes together pin the page
     count, the reading order, the line breaking and the position of every glyph,
     so two PDFs with the same fingerprint print and read identically. The two
     timestamp lines are dropped because they are the thing being tolerated.
 
     What it does not cover: the outline (bookmark) tree and embedded font
     subsets. Both are determined by the intermediate typst source, which is
-    compared separately, but neither is read back out of the PDF here. That gap
-    is named in PORTABILITY.md rather than papered over.
+    compared separately, but neither is read back out of the PDF here. That gap is
+    named here rather than papered over.
     """
     out = subprocess.run(["pdftotext", "-bbox", pdf, "-"],
                          capture_output=True, text=True, check=False)
@@ -258,9 +269,7 @@ def build_one(src, dest: str, meta: dict, toc: bool, epoch: int) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--only", help="build a single document id (or 'specimen')")
-    ap.add_argument("--specimen-only", action="store_true",
-                    help="build only the theme specimen page")
+    ap.add_argument("--only", help="build a single document id")
     ap.add_argument("--no-combined", action="store_true",
                     help="skip the single combined PDF of the whole pack")
     ap.add_argument("--check-reproducible", action="store_true",
@@ -270,12 +279,14 @@ def main() -> int:
     require("pandoc", "Install with: brew install pandoc")
     require("typst", "Install with: brew install typst")
 
-    readiness = yaml.load(open(os.path.join(ROOT, "release-readiness.yml"), encoding="utf-8"),
-                          Loader=DateSafeLoader)
-    version = readiness["pack_version"]
-    status = readiness["release_status"]
+    # The pack version comes from the file `make doctor` already reads, so there is
+    # one place to change it and no chance of two files disagreeing about which
+    # release a PDF belongs to.
+    meta = yaml.load(open(os.path.join(ROOT, "template-version.yml"), encoding="utf-8"),
+                     Loader=DateSafeLoader)
+    version = meta["version"]
+    status = "preview" if "preview" in version else "release"
     git = git_state()
-    built_on = dt.datetime.now(dt.timezone.utc).replace(microsecond=0)
     epoch, epoch_from = source_date_epoch()
     # The date on the cover is the revision's date, not today's. A document
     # rebuilt six months later has not changed, and should not claim to have.
@@ -292,48 +303,37 @@ def main() -> int:
 
     targets: list[tuple[str, str, dict, bool]] = []
 
-    # The specimen always builds: before Phase 3 it is the only proof the
-    # pipeline works, and afterwards it is the theme's regression target.
-    if not args.only or args.only == "specimen":
-        targets.append((SPECIMEN, os.path.join(OUT, "theme-specimen.pdf"),
-                        {"docid": "theme-specimen", "packversion": version,
+    for docid, title in DOCUMENTS:
+        if args.only and args.only != docid:
+            continue
+        src = os.path.join(DOCS, "%s.md" % docid)
+        if not os.path.exists(src):
+            print("      skip  %-38s source not written yet" % docid)
+            continue
+        targets.append((src, os.path.join(OUT, "%s.pdf" % docid),
+                        {"docid": docid, "packversion": version,
                          "status": status, "commit": git["commit"][:12],
-                         "date": doc_date}, False))
-
-    if not args.specimen_only:
-        for doc in readiness["documents"]:
-            if not doc.get("pdf") or (args.only and args.only != doc["id"]):
-                continue
-            src = os.path.join(ROOT, doc["path"])
-            if not os.path.exists(src):
-                print("      skip  %-38s source not written yet" % doc["id"])
-                continue
-            targets.append((src, os.path.join(OUT, "%s.pdf" % doc["id"]),
-                            {"docid": doc["id"], "packversion": version,
-                             "status": status, "commit": git["commit"][:12],
-                             "date": doc_date,
-                             "subtitle": doc["title"]}, True))
+                         "date": doc_date, "subtitle": title}, True))
 
     # The combined pack. Built as one pandoc invocation over every source rather
     # than by stitching finished PDFs together, so it gets a single continuous
     # table of contents and one bookmark tree instead of the flat concatenation
     # `pdfunite` would leave behind.
-    combined_sources = [os.path.join(ROOT, d["path"]) for d in readiness["documents"]
-                        if d.get("pdf") and os.path.exists(os.path.join(ROOT, d["path"]))]
-    if (not args.only and not args.specimen_only and not args.no_combined
-            and len(combined_sources) > 1):
+    combined_sources = [os.path.join(DOCS, "%s.md" % docid) for docid, _ in DOCUMENTS
+                        if os.path.exists(os.path.join(DOCS, "%s.md" % docid))]
+    if not args.only and not args.no_combined and len(combined_sources) > 1:
         targets.append((combined_sources, os.path.join(OUT, "%s.pdf" % COMBINED_ID),
                         {"docid": COMBINED_ID, "packversion": version,
                          "status": status, "commit": git["commit"][:12],
                          "date": doc_date,
                          "subtitle": "The complete pack, %d documents"
                                      % len(combined_sources)}, True))
-    elif len(combined_sources) <= 1 and not args.only and not args.specimen_only:
+    elif len(combined_sources) <= 1 and not args.only:
         print("      skip  %-38s needs 2+ documents, %d written"
               % (COMBINED_ID, len(combined_sources)))
 
     if not targets:
-        sys.exit("nothing to build: no source documents exist and the specimen was excluded")
+        sys.exit("nothing to build: no document in DOCUMENTS exists under docs/")
 
     artifacts = []
     overflows: list[tuple[str, list[str]]] = []
@@ -354,36 +354,6 @@ def main() -> int:
         if hits:
             overflows.append((os.path.relpath(dest, ROOT), hits))
         artifacts.append(row)
-
-    manifest = {
-        "schema_version": 1,
-        "pack_version": version,
-        "built_on": built_on.isoformat().replace("+00:00", "Z"),
-        "git": git,
-        "toolchain": {"pandoc": pandoc_v, "typst": typst_v,
-                      "os": "%s-%s" % (sys.platform, os.uname().machine),
-                      "source_date_epoch": epoch,
-                      "source_date_epoch_from": epoch_from},
-        "artifacts": artifacts,
-    }
-    mpath = os.path.join(OUT, "release-manifest.json")
-    with open(mpath, "w", encoding="utf-8") as fh:
-        json.dump(manifest, fh, indent=2)
-        fh.write("\n")
-
-    # Validate what we just wrote. A build that emits an invalid manifest has
-    # produced untraceable artifacts, which is a failed build.
-    try:
-        import jsonschema
-        schema = json.load(open(os.path.join(ROOT, "schemas", "release-manifest.schema.json"),
-                                encoding="utf-8"))
-        jsonschema.Draft202012Validator(schema).validate(manifest)
-        print("      manifest valid against schemas/release-manifest.schema.json")
-    except ImportError:
-        print("      WARN: jsonschema not installed, manifest not validated here "
-              "(`make check` will validate it)")
-    except Exception as exc:  # noqa: BLE001 - report and fail, whatever the cause
-        sys.exit("release manifest is invalid: %s" % exc)
 
     if overflows:
         print()
@@ -427,11 +397,9 @@ def main() -> int:
             print("      Neither standard met. Do not release this set.")
             return 1
         if equivalent:
-            print("      Standard met: declared equivalence, not byte-identity.")
-            print("      Record the renderer limitation in claims-ledger.json and "
-                  "name it in PORTABILITY.md")
-            print("      before releasing, per §13. Reaching for the weaker standard "
-                  "is allowed; doing it silently is not.")
+            print("      Same text, boxes and page count; different bytes. That is the")
+            print("      weaker of the two standards. Reaching for it is allowed; doing")
+            print("      it without saying so is not.")
         else:
             print("      Standard met: byte-identical output, the stronger of the two.")
 
@@ -444,8 +412,9 @@ def main() -> int:
     print("      %d artifact(s), %.1f KB total" % (len(artifacts), total / 1024))
     if git["dirty"]:
         print()
-        print("      NOTE: built from a dirty working tree. The manifest records this. "
-              "A release build must be from a clean tree or its checksums mean nothing.")
+        print("      NOTE: built from a dirty working tree, so the digests above "
+              "describe uncommitted\n            content. Commit first if you mean "
+              "to quote them.")
     return 0
 
 

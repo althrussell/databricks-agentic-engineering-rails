@@ -1,0 +1,22 @@
+# harness/cursor/.generated.sha256
+# Written by harness/scripts/render.py. Read by harness/scripts/verify.sh,
+# which is POSIX sh and parses this file with no YAML and no JSON.
+#
+# Tab-separated. One record per line:
+#   schema     <n>
+#   inputs     <sha256 over every file the renderer read>
+#   file       <mode> <sha256> <path relative to this directory>
+#   unmanaged  <path>   hand-written; its content is deliberately not checked
+#
+# A changed `inputs` means the policy moved and this directory needs
+# regenerating. A changed `file` hash with `inputs` intact means someone
+# edited the output. verify.sh reports those two cases differently, because
+# they are different mistakes.
+schema	1
+inputs	29b553f747d0cb5a00cbb666c6dc376a9d5d53d339157578c2f27db1fe73128f
+file	644	105f0cd82bbff876fff00fe9903d0821ba7e9f0ce2620f27714060aab5ed4870	RENDER-NOTES.md
+file	644	f6f850ead7e59ba61ef54ad61528e3d6d61b546cc80843e08cf91b88a136dea4	cli.json
+file	755	acab04d5f75e6fd189083f68edd1d5d04542e10516da0d802dbdf29c48803b74	launch.sh
+file	644	24068ba5f701ebb2c5938737d43b248a38cd8e16651dce699243146bdea2c00c	mcp.json
+file	644	b35c4cce4cad3035c3fbea0fa9a4f9493fa35bb7dcc73e45802dd9dbddbec029	rules/rails.mdc
+unmanaged	SETUP.md

@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(**)",
+      "Write(**)",
+      "Shell(git status)",
+      "Shell(git diff)",
+      "Shell(git log)",
+      "Shell(git show)",
+      "Shell(git add)",
+      "Shell(git commit)",
+      "Shell(git switch)",
+      "Shell(git restore)",
+      "Shell(git stash)",
+      "Shell(git worktree)",
+      "Shell(make check)",
+      "Shell(make docs)",
+      "Shell(make test)",
+      "Shell(make e2e)",
+      "Shell(make doctor)",
+      "Shell(npm run)",
+      "Shell(npm test)",
+      "Shell(npm ci)",
+      "Shell(pytest)",
+      "Shell(uv run)",
+      "Shell(python3 scripts/)"
+    ],
+    "deny": [
+      "Shell(git push --force)",
+      "Shell(git push -f)",
+      "Shell(gh pr merge)",
+      "Shell(gh pr ready)",
+      "Shell(gh release create)",
+      "Shell(databricks bundle deploy)",
+      "Shell(databricks bundle destroy)",
+      "Shell(security find-generic-password)"
+    ]
+  }
+}

@@ -83,5 +83,5 @@ not_registered:
   - name: filesystem servers
     reason: >-
       The harness already has first-class file tools that the permission tiers
-      and the boundary both understand. A filesystem MCP server adds a second
-      path to the same capability, governed by neither.
+      understand. A filesystem MCP server adds a second path to the same
+      capability, governed by neither.

@@ -21,7 +21,7 @@
 # harness splits compound commands and strips a short fixed list of wrappers. It is
 # not a boundary around the program. A rule anchored on the first two words stops
 # the obvious spelling of a push and misses the same command with a global option in
-# front of the subcommand, or with the subcommand quoted (claim cc-bash-rule-limits).
+# front of the subcommand, or with the subcommand quoted.
 # Those forms are not exotic; two of them are things a competent engineer types by
 # habit.
 #
@@ -49,7 +49,7 @@
 # It is not a security boundary. A determined agent, or a prompt-injected one, can
 # express any of these actions in a form this text match cannot see: base64, a
 # script written to a file and then run, a language runtime's own process API. The
-# boundary in harness/shared/boundary.yml is what removes the capability; this guard
+# harness's own working-directory scope is what removes the capability; this guard
 # removes the accident and writes a record of the attempt. Deploy both, or neither.
 
 set -euf   # -f matters: the tokeniser loops over unquoted $cmd, and a command
@@ -208,7 +208,7 @@ fi
 # ---------------------------------------------------------- credential-access --
 if contains "databrickscfg" || contains ".databricks/token" || contains "token-cache"; then
   deny credential-access \
-    "That file is the human's workspace credential. Reading it hands this session their full authority, which is exactly what the boundary exists to remove."
+    "That file is the human's workspace credential. Reading it hands this session their full authority. Mint a short-lived token with \`databricks auth token\` instead."
 fi
 if has databricks && has auth && has token; then
   deny credential-access \

@@ -45,8 +45,8 @@ if [ -z "$PY" ]; then
   printf '\n  No Python interpreter found (looked for .venv/bin/python3, python3, python).\n\n' >&2
   printf '  The renderer parses YAML and emits JSON, which is the one job in this\n' >&2
   printf '  repository that POSIX sh should not be doing by hand. See\n' >&2
-  printf '  docs/DECISIONS/0004-two-languages.md for where the line sits, and\n' >&2
-  printf '  docs/PREREQUISITES.md for what to install.\n\n' >&2
+  printf '  docs/DECISIONS/0004-posix-sh-for-diagnostics.md for where the line sits,\n' >&2
+  printf '  and docs/01-prerequisites.md for what to install.\n\n' >&2
   exit 1
 fi
 
