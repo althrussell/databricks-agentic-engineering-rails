@@ -66,6 +66,74 @@ collapse() {
   printf '%s' "$1" | sed -e 's|/\./|/|g' -e ':a' -e 's|[^/][^/]*/\.\./||; ta' -e 's|^\./||'
 }
 
+# --------------------------------------------------------------- pages exclude --
+# A link can resolve perfectly on disk and on GitHub and still 404 in a browser,
+# because the Pages build excludes the file. That happened here: `exclude: README.md`
+# in docs/_config.yml unpublished docs/DECISIONS/README.md and
+# docs/assets/img/README.md, both linked from the homepage, and this checker called
+# the site fine because it was looking at the filesystem.
+#
+# So the exclude list is read and links into it are reported. Parsed with sed rather
+# than a YAML library because this script carries no interpreter (see
+# docs/DECISIONS/0004-posix-sh-for-diagnostics.md); the list is a flat sequence of
+# scalars, which sed can read correctly, and a nested one produces a line with a colon
+# in it, which assert_pages_excludes_readable refuses to guess at.
+PAGES_CONFIG=docs/_config.yml
+pages_excludes() {
+  [ -f "$PAGES_CONFIG" ] || return 0
+  sed -n '/^exclude:/,/^[^ #-]/{ s/^  *- *//p; }' "$PAGES_CONFIG" \
+    | sed 's/[[:space:]]*$//; s/^"//; s/"$//' \
+    | grep -v '^$'
+}
+
+# Read once, so the file is parsed one time rather than once per link, and so the
+# refusal below has something to inspect before any checking starts.
+PAGES_EXCLUDES=$(pages_excludes)
+
+# Where the refusal has to live, and why it is not next to the code it protects.
+#
+# The obvious home for this is inside pages_excluded, beside the case that cannot
+# handle a nested entry. It was there. It did not work, and a control run is what
+# found that out: the message printed, and the script went on to report "0 broken"
+# - the unearned pass the message exists to prevent.
+#
+# The cause is three layers of subshell. pages_excluded matches inside a pipeline;
+# it is called from check_internal; check_internal runs inside OUT=$(run), which is
+# a command substitution. `exit` in any of those exits a subshell nobody is reading
+# the status of. So no check in this script can be fatal from where it runs, and
+# anything that must stop the run has to be called from the top level, before
+# OUT=$(run). That is a property of the script's shape, not of this one check.
+assert_pages_excludes_readable() {
+  bad=$(printf '%s\n' "$PAGES_EXCLUDES" | grep ':' || true)
+  [ -n "$bad" ] || return 0
+  printf '\n  CANNOT CHECK  %s: an exclude entry is not a plain path.\n' \
+    "$PAGES_CONFIG" >&2
+  printf '%s\n' "$bad" | sed 's/^/                  /' >&2
+  printf '  This check reads a flat list of paths and cannot tell what a nested\n' >&2
+  printf '  entry excludes. Exiting 2 rather than reporting a pass it did not earn:\n' >&2
+  printf '  a link into an excluded file resolves on disk and 404s on the site.\n\n' >&2
+  exit 2
+}
+
+# Does a repository-relative path fall under one of those entries? Jekyll matches a
+# bare name at every depth and a trailing-slash entry as a directory prefix, so both
+# shapes are handled. Fed by a heredoc rather than a pipe so that `return` returns
+# from the function, and read line by line so a path containing a space still works.
+pages_excluded() {
+  rel=${1#docs/}
+  [ "$rel" = "$1" ] && return 1          # not under docs/, so Pages never sees it
+  while IFS= read -r pat; do
+    [ -n "$pat" ] || continue
+    case "$pat" in
+      */) case "$rel" in "${pat}"*) return 0 ;; esac ;;
+      *)  case "$rel" in "$pat"|*/"$pat") return 0 ;; esac ;;
+    esac
+  done <<EOF
+$PAGES_EXCLUDES
+EOF
+  return 1
+}
+
 fail() { printf '  BROKEN  %s\n' "$1"; }
 warn() { printf '  warn    %s\n' "$1"; }
 
@@ -107,6 +175,10 @@ check_internal() {
           fail "$file:$lineno -> $target (no such path)"
           continue
         fi
+        if pages_excluded "$full"; then
+          fail "$file:$lineno -> $target (exists on disk, excluded from the Pages build by $PAGES_CONFIG, so it 404s on the site)"
+          continue
+        fi
       else
         full="$file"
       fi
@@ -132,13 +204,35 @@ check_internal() {
 }
 
 # ---------------------------------------------------------------- external ----
-# Every URL in the markdown, including the table in docs/SOURCES.md. Fenced code
-# blocks are skipped, so an example URL in a snippet is not treated as a claim -
-# which is why a source URL belongs in a table and not in a fence.
+# Every URL in the markdown, including the table in docs/SOURCES.md. Two things are
+# skipped, because neither is a URL this pack is claiming you can reach:
+#
+#   a fenced block          an example in a snippet. Which is why a source URL
+#                           belongs in a table and not in a fence.
+#   "## Excluded, and why"  a section whose entire subject is URLs that are NOT
+#                           sources, and whose commonest reason for listing one is
+#                           that it 404s. Fetching those makes this check report a
+#                           permanent failure for a page the document already says
+#                           does not exist, and a checker with a failure nobody can
+#                           fix is a checker everybody learns to skip.
+#
+# The rejected first attempt is worth recording, because it looked better than it was:
+# skip any URL inside backticks, on the reasoning that backticks mean quoted. It does
+# hide the excluded entries, and it also silently stopped checking
+# `curl -fsSL https://opencode.ai/install | bash` and the two other installer URLs in
+# docs/01-prerequisites.md - the links whose rot would strand a reader on step one.
+# A URL's formatting does not say whether it should resolve. The section it is filed
+# under does.
 external_urls() {
   {
     for file in $(markdown_files); do
-      awk '/^[ \t]*```/ { f = !f; next } !f { print }' "$file" \
+      awk '
+        /^[ \t]*```/ { f = !f; next }
+        f { next }
+        /^## / { skip = ($0 ~ /^## Excluded, and why[ \t]*$/) }
+        skip { next }
+        { print }
+      ' "$file" \
         | grep -o 'https\{0,1\}://[A-Za-z0-9._~:/?#@!$&*+,;=%-]*' \
         | sed 's/[.,)]*$//'
     done
@@ -184,6 +278,10 @@ run() {
     all)      check_internal; check_external ;;
   esac
 }
+
+# The one place in this script where a refusal can still stop the run. Only the modes
+# that check internal links make a claim about the Pages build, so only they need it.
+case "$MODE" in internal|all) assert_pages_excludes_readable ;; esac
 
 OUT=$(run)
 printf '%s\n' "$OUT"

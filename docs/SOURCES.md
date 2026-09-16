@@ -156,7 +156,12 @@ Used for `docs/00-start-here (Track A)`.
 Candidates that were considered and are not cited. Listed because a reader who
 wonders why an obvious page is absent deserves an answer other than an omission.
 
-- **`https://docs.databricks.com/aws/en/admin/system-tables/serving`** — 404. Returned 404 on 2026-09-15. The model-serving cost table is document ed at admin/system-tables/model-serving-cost instead; that path is u sed.
-- **`https://developers.databricks.com/api/mcp`** — 405. Returns 405 to a GET. It is an MCP endpoint, not a readable page. Re gistered as a tool in Phase 0 rather than cited as a source.
-- **`github.com/dgokeeffe/agentic-energy-on-databricks-public`** — 404. Did not resolve on 2026-09-15. Not a source unless it becomes public .
-- **`https://developers.databricks.com/sitemap-0.xml`** — 200. Used for discovery only. A sitemap is not a citable claim source; ev ery page relied on is listed individually below.
+This heading is load-bearing. `scripts/link-check.sh` fetches every URL in the pack
+except the ones filed under `## Excluded, and why`, and several entries here are listed
+precisely because they do not resolve. Retitling the section would make the link check
+report a permanent failure that nobody can fix.
+
+- **`https://docs.databricks.com/aws/en/admin/system-tables/serving`** — 404. Returned 404 on 2026-09-15. The model-serving cost table is documented at admin/system-tables/model-serving-cost instead; that path is used.
+- **`https://developers.databricks.com/api/mcp`** — 405. Returns 405 to a GET. It is an MCP endpoint, not a readable page. Registered as a tool in Phase 0 rather than cited as a source.
+- **`github.com/dgokeeffe/agentic-energy-on-databricks-public`** — 404. Did not resolve on 2026-09-15. Not a source unless it becomes public.
+- **`https://developers.databricks.com/sitemap-0.xml`** — 200. Used for discovery only. A sitemap is not a citable claim source; every page relied on is listed individually above.

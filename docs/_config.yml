@@ -50,12 +50,14 @@ plugins:
 #
 #   theme/            the PDF theme: a Typst template used by `make docs`, not
 #                     read in a browser.
-#   README.md         the docs/ directory has no README; this line is a guard for
-#                     one being added later as a note to editors rather than as a
-#                     page.
+#
+# `README.md` is deliberately NOT excluded. It was, and it silently unpublished
+# docs/DECISIONS/README.md and docs/assets/img/README.md — both linked from the
+# homepage, both 404 on the site, both resolving perfectly on GitHub and on disk.
+# An exclude here is a bare filename matched at every depth, so excluding a name
+# excludes every file with that name. Add a path, never a name.
 exclude:
   - theme/
-  - README.md
 
 # Markdown settings matching the PDF pipeline as closely as the Pages build
 # allows, so a heading that anchors correctly here anchors correctly there.
