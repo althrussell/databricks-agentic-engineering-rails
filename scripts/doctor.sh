@@ -73,10 +73,15 @@ probe() {
     | sed 's/.*[Vv]ersion //; s/^v//; s/^[^0-9]*//; s/ .*//' | head -1
 }
 
+# Requirement tiers here must match the table in docs/01-prerequisites.md. python3 is
+# required because `ug` is a Python tool and because `make config` will not run without
+# it; curl is required because every route check in the setup pages is a curl. uv, node
+# and gh are conveniences the guide mentions but never depends on.
 add "git"        required "$(probe git --version)"        ""
 add "databricks" required "$(probe databricks --version)" "$(recorded databricks_cli)"
+add "python3"    required "$(probe python3 --version)"    "$(recorded python)"
+add "curl"       required "$(probe curl --version)"       ""
 add "uv"         optional "$(probe uv --version)"         "$(recorded uv)"
-add "python3"    optional "$(probe python3 --version)"    "$(recorded python)"
 add "node"       optional "$(probe node --version)"       "$(recorded node)"
 add "gh"         optional "$(probe gh --version)"         "$(recorded gh)"
 
