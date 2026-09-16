@@ -51,11 +51,27 @@ plugins:
 #   theme/            the PDF theme: a Typst template used by `make docs`, not
 #                     read in a browser.
 #
-# `README.md` is deliberately NOT excluded. It was, and it silently unpublished
-# docs/DECISIONS/README.md and docs/assets/img/README.md — both linked from the
-# homepage, both 404 on the site, both resolving perfectly on GitHub and on disk.
-# An exclude here is a bare filename matched at every depth, so excluding a name
-# excludes every file with that name. Add a path, never a name.
+# `README.md` was here and is deliberately gone. Two reasons, and only the first is
+# proven:
+#
+#   An entry here is matched at every depth, not just at the docs/ root. It was added
+#   to guard against a future docs/README.md, and as written it also covered
+#   docs/DECISIONS/README.md and docs/assets/img/README.md, both linked from the
+#   homepage. Add a path, never a bare name.
+#
+#   Whether it was actually suppressing those two pages was never established. The
+#   404s that prompted the removal were at DECISIONS/README.html and
+#   assets/img/README.html, which are not the URLs those files are published at, so
+#   they were evidence of nothing. Reproducing a Pages build locally needs native
+#   gems, which need a compiler this machine does not currently have. Removed on the
+#   first reason alone.
+#
+# Worth knowing when reading the two paths above: `jekyll-readme-index` is on by
+# default on GitHub Pages, and it publishes a directory's README.md as that
+# directory's index. So docs/DECISIONS/README.md is served at DECISIONS/ and never at
+# DECISIONS/README. A docs/README.md would therefore become the site index and shadow
+# index.md — which is the case the original entry was reaching for, and the reason to
+# handle it by not creating that file rather than by excluding a name.
 exclude:
   - theme/
 

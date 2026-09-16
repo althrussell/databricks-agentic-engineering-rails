@@ -71,8 +71,8 @@ the gate is enforced.
 
 The images on this site and in the repository README are decorative and were
 generated. Every point they illustrate is also made in prose, a table or a
-diagram on the same page — see [the note on how they were made and why that rule
-exists](assets/img/README.md).
+diagram on the same page — see
+[the note on how they were made and why that rule exists](assets/img/README.md).
 
 ## What this is not
 

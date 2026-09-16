@@ -137,6 +137,40 @@ EOF
 fail() { printf '  BROKEN  %s\n' "$1"; }
 warn() { printf '  warn    %s\n' "$1"; }
 
+# ------------------------------------------------------- links split over a line --
+# A relative .md link inside docs/ has to sit on one line, and this is not a style
+# rule. `jekyll-relative-links` is what turns [text](0001-thing.md) into a link to
+# the published page, and it matches a link with a regex that does not cross a
+# newline. Wrap the link text and the plugin does not see the link at all: Pages
+# copies the .md through untouched and serves it as text/markdown, so the reader
+# gets the raw file - front matter, pipe tables and all - instead of a page.
+#
+# It returns 200, which is why this is a separate check. Every other test here asks
+# whether a target resolves, and a wrapped link resolves perfectly. It also never
+# reached the link loop above, because that loop reads a line at a time and half a
+# link matches nothing. This was live on docs/index.md and no check could see it.
+check_wrapped() {
+  for file in $(markdown_files); do
+    case "$file" in docs/*) ;; *) continue ;; esac   # only the Pages-published tree
+    awk -v F="$file" '
+      /^[ \t]*```/ { fence = !fence; next }
+      fence { next }
+      { line[NR] = $0 }
+      END {
+        for (i = 1; i < NR; i++) {
+          if (line[i] ~ /\[[^]]*$/ && line[i + 1] ~ /^[^]]*\]\([^)]*\.md[^)]*\)/) {
+            target = line[i + 1]
+            sub(/^[^]]*\]\(/, "", target)
+            sub(/\).*$/, "", target)
+            printf "  BROKEN  %s:%d -> %s (link text wraps onto line %d, so ", F, i, target, i + 1
+            printf "jekyll-relative-links leaves it alone and the site serves raw markdown; "
+            printf "put the whole link on one line)\n"
+          }
+        }
+      }' "$file"
+  done
+}
+
 # ---------------------------------------------------------------- internal ----
 check_internal() {
   printf '\n  internal links (no network)\n\n'
@@ -273,9 +307,9 @@ check_external() {
 # and the verdict is counted from it.
 run() {
   case "$MODE" in
-    internal) check_internal ;;
+    internal) check_internal; check_wrapped ;;
     external) check_external ;;
-    all)      check_internal; check_external ;;
+    all)      check_internal; check_wrapped; check_external ;;
   esac
 }
 
