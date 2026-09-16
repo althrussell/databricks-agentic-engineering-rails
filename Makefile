@@ -25,7 +25,7 @@ SHELL := /bin/sh
 help:
 	@printf '\n  databricks-agentic-engineering-rails\n\n'
 	@sed -n 's/^## \([a-z0-9-]*\): \(.*\)/  make \1|\2/p' $(MAKEFILE_LIST) \
-	  | awk -F'|' '{ printf "  %-16s %s\n", $$1, $$2 }'
+	  | awk -F'|' '{ printf "  %-18s %s\n", $$1, $$2 }'
 	@printf '\n  Setting up a harness? You do not need any of these.\n'
 	@printf '  Read harness/<your-harness>/SETUP.md instead.\n\n'
 
