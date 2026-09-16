@@ -1,70 +1,25 @@
-# Build output. PDFs are release artifacts, published on a tag, not committed on
-# every docs edit: a binary that changes on every build makes every diff useless.
-release/
-*.pdf
-!docs/assets/*.pdf
-
-# Credentials and anything shaped like them. Nothing in this repository should
-# ever need a token on disk, and the execution boundary depends on that staying
-# true (see docs/16-security-privacy-supply-chain.md).
+# Credentials and anything shaped like them. Nothing in this repository needs a
+# token on disk: the reference MCP configs read ${DATABRICKS_TOKEN} from the
+# environment precisely so that no file here can carry one by accident.
 .env
 .env.*
 !.env.example
 *.pem
 *.key
 .databrickscfg
-config.yml
-!config.example.yml
 
-# Harness state. Generated per machine from harness/shared/ by the launcher, so
-# committing it would freeze one person's paths into everyone's setup.
-.claude/settings.local.json
-.claude/history/
-harness/*/generated/
-.codex/
-.mcp.local.json
-
-# The guard's decision journal. Every permission decision the never-automatic
-# guard makes is appended here, so committing it would put one developer's
-# command history into everyone's clone. It is local evidence, not shared state.
-.daer/
-
-# Scratch HOME used by the harness verification. Contains a real OAuth token
-# cache while a session is running.
-.harness-scratch/
-
-# Python
-__pycache__/
-*.py[cod]
-.venv/
-venv/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.coverage
-coverage.xml
-htmlcov/
-
-# Node / AppKit
-node_modules/
-dist/
-build/
-.next/
-*.tsbuildinfo
-playwright-report/
-test-results/
-blob-report/
-
-# Terraform / OpenTofu. State can hold resource identifiers and secrets.
-.terraform/
-*.tfstate
-*.tfstate.*
-*.tfvars
-!*.tfvars.example
-.terraform.lock.hcl
-
-# Databricks bundle output
-.databricks/
+# What SETUP.md tells you to create. If you follow a setup page inside this
+# clone rather than in your own project, these appear — they are your machine's
+# configuration, not this repository's content, so `git status` stays clean.
+# Anchored with a leading slash: a bare filename in .gitignore matches at every
+# depth, which would swallow the tracked harness/*/AGENTS.md.
+/.claude/
+/.mcp.json
+/.cursor/
+/.github/copilot-instructions.md
+/opencode.json
+/AGENTS.md
+/config.toml
 
 # OS noise
 .DS_Store

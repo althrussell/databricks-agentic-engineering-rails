@@ -1,7 +1,18 @@
 # 0001 — Five harnesses generated, each labelled by what it can enforce
 
-**Status:** accepted
+**Status:** partially superseded by [0006](0006-guidance-over-machinery.md)
 **Date:** 2026-09-16
+
+> **What still stands:** the analysis below of how the five harnesses differ, and the
+> rule that a config must state what it cannot enforce. That is the substance of this
+> record and it is unchanged.
+>
+> **What was superseded:** the mechanism. The five directories are no longer generated
+> from `harness/shared/` — there is no generator, no digest manifest and no
+> `RENDER-NOTES.md`. Each directory is hand-maintained, and the "cannot express"
+> sections live in each `SETUP.md`. See [0006](0006-guidance-over-machinery.md) for the
+> measurement that forced the change. The file name is left alone because a record is an
+> identifier, not a description.
 
 ## Context
 

@@ -1,4 +1,4 @@
-# Makefile — the one entry point.
+# Makefile - the one entry point.
 #
 # Two ways to run the checks means one of them rots, so every check a human runs and
 # every check CI runs is a target here. If CI does something this Makefile cannot do,
@@ -6,131 +6,83 @@
 #
 # The split that matters:
 #
-#   make check        hermetic. No network, no workspace, no credentials. This is the
-#                     pull-request lane. A check that can fail because someone else's
-#                     web server is down does not belong in it.
-#   make check-live   network and workspace. Scheduled lane. Failures here are news
-#                     about the world, not about the change under review.
+#   make check        no credentials, no workspace. This is the pull-request lane.
+#   make links-live   reaches other people's web servers. A failure here is news about
+#                     the world, not about the change under review.
+#
+# Nothing here is needed to set up a harness. These targets check this guide: that its
+# scripts parse, its example configs are valid, and its links resolve. Setting yourself
+# up is harness/<your-harness>/SETUP.md and needs none of it.
 #
 # Run `make help` for the list.
 
 SHELL := /bin/sh
 .DEFAULT_GOAL := help
 
-# Prefer the pinned virtualenv from `make deps` when it exists, so the checks do not
-# depend on whatever the system python happens to have installed. Fall back to the
-# system interpreter, because requiring a venv to run a linter is its own friction.
-PY := $(shell if [ -x .venv/bin/python3 ]; then echo .venv/bin/python3; else echo python3; fi)
-
-# The versions this pack was exercised against, read from the file that records them
-# rather than repeated here. One source of truth, and `make doctor` compares the
-# reader's machine against the same numbers.
-PANDOC_PINNED := $(shell sed -n '/^  pandoc:/,/^  [a-z_]*:/p' template-version.yml | sed -n 's/^    version: *"\(.*\)"/\1/p' | head -1)
-TYPST_PINNED  := $(shell sed -n '/^  typst:/,/^  [a-z_]*:/p'  template-version.yml | sed -n 's/^    version: *"\(.*\)"/\1/p' | head -1)
-PANDOC_FOUND  := $(shell pandoc --version 2>/dev/null | head -1 | sed 's/^pandoc *//')
-TYPST_FOUND   := $(shell typst --version 2>/dev/null | head -1 | sed 's/^typst *//')
-
-# The Databricks CLI profile the live targets authenticate with. DEFAULT is the CLI's
-# own default, so the live lanes work on a machine that has run `databricks auth login`
-# once and nothing else. Override per invocation:
-#   make tool-budget-live PROFILE=my-workspace
-PROFILE ?= DEFAULT
-
-.PHONY: help check check-live lint links test docs deps doctor clean \
-        harness-generate harness-verify harness-deny-proof \
-        tool-budget tool-budget-live
+.PHONY: help check lint config links links-live doctor
 
 ## help: list the targets
 help:
 	@printf '\n  databricks-agentic-engineering-rails\n\n'
 	@sed -n 's/^## \([a-z0-9-]*\): \(.*\)/  make \1|\2/p' $(MAKEFILE_LIST) \
-	  | awk -F'|' '{ printf "  %-24s %s\n", $$1, $$2 }'
-	@printf '\n  Start with `make doctor`. Hermetic by default: `make check` needs no\n'
-	@printf '  network and no credentials.\n\n'
+	  | awk -F'|' '{ printf "  %-16s %s\n", $$1, $$2 }'
+	@printf '\n  Setting up a harness? You do not need any of these.\n'
+	@printf '  Read harness/<your-harness>/SETUP.md instead.\n\n'
 
-# --------------------------------------------------------------------- checks --
-## check: every check that needs no network and no credentials
-check: lint links harness-verify test
-	@./scripts/tool-budget.py --quiet
+## check: every check that needs no credentials and no workspace
+check: lint config links
 	@printf '\n  check passed\n\n'
 
-## check-live: the checks that need the network or a workspace
-check-live:
-	@./scripts/link-check.sh --external
-	@./scripts/doctor.sh --live
-
-## lint: every shell script parses, every python file compiles
+## lint: every shell script parses
 lint:
 	@printf '\n  syntax\n\n'
-	@for f in $$(find scripts harness -name '*.sh' 2>/dev/null | sort); do \
+	@for f in $$(find scripts -name '*.sh' | sort); do \
 	  sh -n "$$f" || exit 1; printf '  ok      %s parses\n' "$$f"; \
 	done
-	@for f in $$(find scripts harness -name '*.py' 2>/dev/null | sort); do \
-	  $(PY) -m py_compile "$$f" || exit 1; printf '  ok      %s compiles\n' "$$f"; \
-	done
-	@rm -rf scripts/__pycache__ harness/scripts/__pycache__
 	@if command -v shellcheck >/dev/null 2>&1; then \
-	  shellcheck -s sh $$(find scripts harness -name '*.sh' | sort) \
+	  shellcheck -s sh $$(find scripts -name '*.sh' | sort) \
 	    && printf '  ok      shellcheck clean\n'; \
 	else \
-	  printf '  --      shellcheck not installed, so the shell scripts are parsed and\n'; \
-	  printf '          not linted. brew install shellcheck\n'; \
+	  printf '  --      shellcheck not installed, so the scripts are parsed and not\n'; \
+	  printf '          linted. brew install shellcheck\n'; \
 	fi
 
-## links: every relative link in the docs resolves to a file that exists
+## config: every harness config a reader copies is valid JSON or TOML
+#
+# These files are hand-maintained, which is the cost accepted in
+# docs/DECISIONS/0006-guidance-over-machinery.md. A config with a trailing comma is the
+# failure that decision made possible, so this is the check that answers for it.
+#
+# It exits 2 rather than passing when python3 is absent, because a checker that cannot
+# run and reports success is worse than no checker. tomllib needs Python 3.11, so a
+# missing tomllib is reported as "not validated" rather than treated as a pass.
+config:
+	@printf '\n  configs\n\n'
+	@command -v python3 >/dev/null 2>&1 || { \
+	  printf '  CANNOT CHECK  python3 absent, so the JSON and TOML configs were not\n'; \
+	  printf '                validated. Exiting 2 rather than reporting a pass.\n'; \
+	  exit 2; }
+	@for f in $$(find harness -name '*.json' | sort); do \
+	  python3 -c 'import json,sys; json.load(open(sys.argv[1]))' "$$f" || exit 1; \
+	  printf '  ok      %s is valid JSON\n' "$$f"; \
+	done
+	@if python3 -c 'import tomllib' 2>/dev/null; then \
+	  for f in $$(find harness -name '*.toml' | sort); do \
+	    python3 -c 'import tomllib,sys; tomllib.load(open(sys.argv[1],"rb"))' "$$f" || exit 1; \
+	    printf '  ok      %s is valid TOML\n' "$$f"; \
+	  done; \
+	else \
+	  printf '  --      python3 has no tomllib (needs 3.11), so the TOML was not validated\n'; \
+	fi
+
+## links: every relative link in the docs resolves, and none is wrapped
 links:
 	@./scripts/link-check.sh --internal
 
-## test: the never-automatic tier against its verdict table
-test:
-	@printf '\n  harness\n\n'
-	@./harness/scripts/deny-proof.sh
-
-# ----------------------------------------------------------------------- docs --
-## docs: build the PDFs from the markdown
-docs:
-	@if [ "$(PANDOC_FOUND)" != "$(PANDOC_PINNED)" ]; then \
-	  printf '  note: pandoc %s found, %s recorded. Output may differ from the release.\n' \
-	    "$(PANDOC_FOUND)" "$(PANDOC_PINNED)"; fi
-	@if [ "$(TYPST_FOUND)" != "$(TYPST_PINNED)" ]; then \
-	  printf '  note: typst %s found, %s recorded. Output may differ from the release.\n' \
-	    "$(TYPST_FOUND)" "$(TYPST_PINNED)"; fi
-	@$(PY) scripts/build-docs.py
-
-# ------------------------------------------------------------------ machine ----
-## deps: create .venv with the pinned check dependencies
-deps:
-	@command -v uv >/dev/null 2>&1 || { printf '  uv is not installed. See docs/01-prerequisites.md\n'; exit 1; }
-	@uv venv .venv
-	@uv pip install --python .venv/bin/python3 --quiet pyyaml==6.0.3
-	@printf '\n  .venv ready. `make check` will use it automatically.\n\n'
+## links-live: every external URL in the docs still answers
+links-live:
+	@./scripts/link-check.sh --external
 
 ## doctor: what this machine has, in a table worth pasting into a bug report
 doctor:
 	@./scripts/doctor.sh
-
-## clean: remove build output
-clean:
-	@rm -rf release .venv scripts/__pycache__ harness/scripts/__pycache__
-	@printf '  removed release/, .venv/ and __pycache__\n'
-
-# ------------------------------------------------------------------ harness ----
-## harness-generate: render every harness config from harness/shared/
-harness-generate:
-	@./harness/scripts/generate.sh
-
-## harness-verify: fail if a generated harness config has been hand-edited
-harness-verify:
-	@./harness/scripts/verify.sh
-
-## harness-deny-proof: run the never-automatic tier against its verdict table
-harness-deny-proof:
-	@./harness/scripts/deny-proof.sh
-
-## tool-budget: report what the MCP configuration costs in context
-tool-budget:
-	@./scripts/tool-budget.py
-
-## tool-budget-live: the same, measured against the governed route (needs a workspace)
-tool-budget-live:
-	@DAER_PROFILE=$(PROFILE) ./scripts/tool-budget.py --live

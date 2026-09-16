@@ -5,14 +5,16 @@
 # characteristics and belong in different lanes:
 #
 #   --internal   No network. Every relative link resolves to a file that exists,
-#                and every #anchor resolves to a heading in that file. Runs in the
-#                pull-request lane, where a check that can fail because someone
+#                every #anchor resolves to a heading in that file, and every path
+#                written in backticks names something that is really there. Runs in
+#                the pull-request lane, where a check that can fail because someone
 #                else's web server is down is worse than no check at all.
 #   --external   Network, with retries. Every http(s) URL answers. Runs on a
 #                schedule, where a 503 is a retry rather than a blocked merge.
 #
-# Written in POSIX sh with awk and sed and no python, so it runs inside the
-# execution boundary and in CI images that carry neither python nor node.
+# Written in POSIX sh with awk and sed and no python, so a broken python cannot
+# stop you checking the links, and so it runs in a CI image that carries neither
+# python nor node (see docs/DECISIONS/0004-posix-sh-for-diagnostics.md).
 #
 # Exit status: 0 if nothing is broken, 1 otherwise. Warnings never change it.
 
@@ -43,12 +45,12 @@ done
 
 cd "$ROOT" || exit 2
 
-# Every markdown file that is part of the pack. release/ holds build output and
-# .git holds history; neither is source.
+# Every markdown file that is part of the pack. .git holds history and
+# node_modules holds someone else's; neither is source.
 markdown_files() {
   find . -name '*.md' \
-    ! -path './.git/*' ! -path './release/*' ! -path './node_modules/*' \
-    ! -path './.harness-scratch/*' | sed 's|^\./||' | sort
+    ! -path './.git/*' ! -path './node_modules/*' \
+    | sed 's|^\./||' | sort
 }
 
 # GitHub's heading slug, near enough for a link inside one repository: lowercase,
@@ -168,6 +170,43 @@ check_wrapped() {
           }
         }
       }' "$file"
+  done
+}
+
+# ------------------------------------------------------- backticked paths --
+# A path written in backticks rather than as a markdown link is invisible to every
+# check above, and it rots exactly as fast. This was live: `docs/DECISIONS/0005-forge-
+# agnostic-gate.md` appeared in two files under a name that record has never had.
+#
+# Deliberately narrow, so that it is precise rather than nearly precise. A token
+# qualifies only if it contains a slash and ends in a source extension, which is what
+# distinguishes a path in this repository from the many bare filenames these documents
+# discuss in the abstract (`SETUP.md`, `AGENTS.md`, `settings.json`). Absolute paths,
+# `~/…` paths and REPLACE-WITH placeholders are somebody else's machine, not ours.
+check_backticked_paths() {
+  printf '\n  backticked paths\n\n'
+  for file in $(markdown_files); do
+    awk -v F="$file" '
+      /^[ \t]*```/ { fence = !fence; next }
+      fence { next }
+      {
+        line = $0
+        while (match(line, /`[^`]+`/)) {
+          tok = substr(line, RSTART + 1, RLENGTH - 2)
+          line = substr(line, RSTART + RLENGTH)
+          if (tok !~ /\//) continue
+          if (tok !~ /\.(md|sh|py|json|toml|ya?ml|mdc)$/) continue
+          if (tok ~ /[ <>{}*?$|()\[\]"'"'"']/) continue
+          if (tok ~ /REPLACE/) continue
+          if (tok ~ /^(https?:|~|\/|\.)/) continue
+          print NR "\t" tok
+        }
+      }
+    ' "$file" | while IFS="$(printf '\t')" read -r lineno tok; do
+      [ -e "$tok" ] && continue
+      [ -e "$(collapse "$(dirname "$file")/$tok")" ] && continue
+      fail "$file:$lineno \`$tok\` (backticked path, no such file)"
+    done
   done
 }
 
@@ -307,9 +346,9 @@ check_external() {
 # and the verdict is counted from it.
 run() {
   case "$MODE" in
-    internal) check_internal; check_wrapped ;;
+    internal) check_internal; check_wrapped; check_backticked_paths ;;
     external) check_external ;;
-    all)      check_internal; check_wrapped; check_external ;;
+    all)      check_internal; check_wrapped; check_backticked_paths; check_external ;;
   esac
 }
 

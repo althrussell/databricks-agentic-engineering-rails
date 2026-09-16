@@ -1,89 +1,110 @@
 # Claude Code — setup
 
-Thirty minutes, on your own laptop, from nothing to a governed session. Prerequisites
-are in `docs/01-prerequisites.md`; the short version is a Databricks CLI you have
-logged in with, Python 3.9+, and this repository cloned.
+Thirty minutes on your own laptop, from nothing to a session with rails on.
+Prerequisites are in [`docs/01-prerequisites.md`](../../docs/01-prerequisites.md); the
+short version is a Databricks CLI you have logged in with and this repository cloned.
 
 ## 1. Install
 
 ```sh
 npm install -g @anthropic-ai/claude-code      # or: brew install claude-code
-uv tool install git+https://github.com/databricks/unity-gateway
 ```
 
-The second one is `ug`, the launcher that points a harness at Unity AI Gateway. It is
-optional — `DAER_NO_UG=1` takes an environment-only path that writes no file anywhere —
-but it is the shortest route and the one this pack assumes.
+## 2. Log in to Databricks
 
-## 2. Check the machine before blaming the harness
+```sh
+databricks auth login --host https://your-workspace.cloud.databricks.com --profile your-profile
+export DATABRICKS_CONFIG_PROFILE=your-profile
+```
+
+`DATABRICKS_CONFIG_PROFILE` is the CLI's own variable, so every `databricks` command and
+every tool that uses the SDK picks up the same profile. Set it in your shell profile and
+stop passing `--profile` by hand.
+
+## 3. Check the machine before blaming the harness
 
 ```sh
 ./scripts/doctor.sh
 ```
 
-Every row is a tool, a version and where to get it. Fix the red rows first. Roughly
-half of "the agent is broken" turns out to be a missing CLI or an expired login.
+Every row is a tool, a version and where to get it. Fix the red rows first. A good share
+of "the agent is broken" is a missing CLI or an expired login.
 
-## 3. Install the configuration
-
-Nothing here is hand-written except this file. `make harness-generate` renders the rest
-from `harness/shared/`, and `make harness-verify` fails if one of the rendered files has
-been edited.
+## 4. Point the harness at the gateway
 
 ```sh
-cp harness/claude-code/settings.json  .claude/settings.json
-cp harness/claude-code/mcp.json       .mcp.json
+uv tool install git+https://github.com/databricks/unity-gateway
+ug claude
 ```
 
-Leave `launch.sh` and `hooks/` where they are: the hook paths resolve through
-`${CLAUDE_PROJECT_DIR}` to `harness/shared/guards/never-automatic.sh`, so copying this
-directory without `harness/shared/` produces a hook that denies every command and
-explains why — safe, and useless.
+`ug` (also installed as `ucode`) is the Databricks tool that configures a harness to use
+Unity AI Gateway. Use it rather than setting the environment by hand: it resolves the
+profile, mints a short-lived token and refreshes it, where a hand-set token expires
+mid-session and fails in a way that reads like a model error. `ug --refresh` re-mints.
+
+It writes into your own user-scope harness configuration — for Claude Code,
+`~/.claude/ucode-settings.json` and the `env` block of `~/.claude/settings.json`. That
+is the right thing when you are configuring your own laptop, which is who this is for,
+but know that it happens — it is your config, not this repository's, that changes.
+
+## 5. Install the permission configuration
+
+```sh
+mkdir -p .claude
+cp harness/claude-code/settings.json  .claude/settings.json
+cp harness/claude-code/mcp.json       .mcp.json          # optional: governed MCP
+```
+
+Edit the two `REPLACE-WITH` placeholders in `.mcp.json` if you want MCP, and export a
+token for it:
+
+```sh
+export DATABRICKS_TOKEN=$(databricks auth token | python3 -c 'import json,sys; print(json.load(sys.stdin)["access_token"])')
+```
+
+That token is short-lived. When MCP stops answering and the model keeps working, it
+expired — re-export it. Skip this file entirely if you do not need workspace tools; the
+permission tiers are the part that matters most and they need nothing from the gateway.
 
 **Accept the trust dialog once per clone.** Until you do, every `permissions.allow`
-entry is discarded and the session queries every routine command. The harness says so
-on one line that is easy to miss. Deny rules and hooks are unaffected, so nothing is
-less safe; it only looks broken.
+entry is discarded and the session asks about every routine command. It says so on one
+line that is easy to miss. Deny rules are unaffected, so nothing is less safe; it only
+looks broken.
 
-## 4. Start a session
+## 6. Confirm it is actually governed
 
-```sh
-export DAER_TEAM=your-team
-export DAER_MCP_SERVICE=catalog.schema.your_mcp_service   # optional
-./harness/claude-code/launch.sh --explain
-./harness/claude-code/launch.sh
+A session that answers is not a session that went through the gateway. During the build
+of this pack a session started with a deliberately invalid gateway token answered
+normally, by falling back to an ambient login. The only answer that counts comes from
+the gateway side:
+
+```sql
+SELECT request_time, model_name, request_tags
+FROM system.ai_gateway.usage
+WHERE request_time > current_timestamp() - INTERVAL 15 MINUTES
+ORDER BY request_time DESC
 ```
 
-`--explain` resolves the profile, makes a real HTTP call to the gateway route and
-prints what it would do without starting anything. Run it first on a new machine: it
-turns "the model is erroring" into "this workspace does not expose that route", which
-is a different conversation with a different person.
+If your session is not in that table, it did not go through the gateway, whatever the
+client told you.
 
-| Variable | Effect |
-| :--- | :--- |
-| `DAER_PROFILE` | Databricks CLI profile. Falls back to `DATABRICKS_CONFIG_PROFILE`, then `DEFAULT`. |
-| `DAER_TEAM` | The `team` gateway request tag. Unset is recorded as `unset`, not omitted — untagged spend has no owner. |
-| `DAER_MCP_SERVICE` | Unity Catalog name of the governed MCP service, `catalog.schema.name`. Unset means no MCP, stated at launch. |
-| `DAER_NO_UG=1` | Take the environment-only path, which writes no user-scope file. |
+## 7. Confirm the rails are live
 
-## 5. Confirm the rails are live
+Inside a session, ask for something in the never-automatic tier — `git push --force` is
+the usual one — and watch it be refused.
 
-```sh
-./harness/scripts/deny-proof.sh
-```
+Then read the limit honestly: a permission rule is matched against the **text of the
+command**, so it stops the obvious spelling and not every spelling. `CLAUDE.md` in your
+project root is the other half of the tier, for the model choosing what to run. Keep the
+two in agreement.
 
-It runs the never-automatic classifier over a table of commands that must be refused
-and commands that must not be, so a guard that denies everything fails as loudly as one
-that denies nothing.
-
-Inside a session, ask for something in the never-automatic tier — `git push --force`
-is the usual one — and watch it be refused twice: once by the permission rule, once by
-the hook, which writes a line to `.daer/guard-journal.jsonl` naming the rule that
-fired.
+What removes the capability rather than describing it is nothing here. Claude Code has no
+working-directory sandbox, so the deny list and your own review are the whole of the
+fence.
 
 ## Where to look next
 
-- [RENDER-NOTES.md](RENDER-NOTES.md) — the rendered tiers, what this harness cannot
-  express, and what is not proved here. Read this before quoting any of it.
-- [../shared/permissions.yml](../shared/permissions.yml) — the policy itself. Change it
-  here, not in the generated output.
+- [`docs/02-permissions.md`](../../docs/02-permissions.md) — what the three tiers are
+  for, and what defeats each one.
+- [`docs/03-gateway-auth.md`](../../docs/03-gateway-auth.md) — routes, request tags,
+  and governed versus direct MCP.

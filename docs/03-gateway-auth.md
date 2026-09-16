@@ -8,37 +8,58 @@ document simpler:
 2. **An MCP registry.** Tools registered through it are governed by Unity Catalog and
    metered like model calls.
 
-You can have either without the other. Two of the five harnesses in this pack can only
+You can have either without the other. Two of the five harnesses covered here can only
 have the second one.
 
 ## Authenticating
 
 ```sh
 databricks auth login --host https://your-workspace.cloud.databricks.com --profile your-profile
+export DATABRICKS_CONFIG_PROFILE=your-profile
 uv tool install git+https://github.com/databricks/unity-gateway
-./harness/<name>/launch.sh --explain
+ug claude          # or: ug codex | ug opencode | ug cursor | ug copilot
 ```
 
-`ug` (aliased `ucode`) configures a named harness to use the gateway. `--explain`
-resolves the profile, makes a real HTTP call to the route and prints what it would do
-without starting anything. Run it first on any new machine.
+`ug`, also installed as `ucode`, is the Databricks tool that points a harness at the
+gateway. Use it rather than exporting a base URL and a token by hand. It resolves the
+profile, mints a short-lived token, writes the configuration in the shape that harness
+actually reads, and `ug --refresh` re-mints when the token expires. A hand-set token
+expires mid-session and fails in a way that reads like a model error, which is an
+afternoon nobody gets back.
 
-The launchers never print a token, a workspace host or an account name, and no script in
-this repository writes to `~/.claude`, `~/.codex` or a managed settings file. `ug`
-itself does write user-scope configuration for the harness you name; the launcher says
-so on the line before it happens, and `DAER_NO_UG=1` takes an environment-only path
-instead.
+Nothing in this repository writes to `~/.claude`, `~/.codex` or a managed settings file.
+`ug` does, and it is your own user-scope configuration it writes. Each `SETUP.md` says so
+on the line before it tells you to run it.
+
+## What `ug` configures, per harness
+
+This asymmetry is the most useful fact in this pack, and it is not in anyone's marketing:
+
+| Command | What it configures | Model traffic through the gateway |
+| :--- | :--- | :--- |
+| `ug claude` | `~/.claude/ucode-settings.json` and the `env` block of `~/.claude/settings.json` | **Yes** — verified here, 200 on the Anthropic route |
+| `ug codex` | A custom provider block in `~/.codex/config.toml` | Provider written; the route was **not** verified on the workspace used here |
+| `ug opencode` | A custom provider block in your `opencode.json` | Provider written; route not verified here |
+| `ug cursor` | The MCP registration only | **No.** Model spend goes to Cursor's own billing |
+| `ug copilot` | The MCP registration only | **No.** Model spend goes to GitHub's own billing |
+
+Read the bottom two rows before you standardise on a harness. Registering MCP is real
+governance over *tools* and none at all over *spend*: those sessions will not appear in
+your usage table, will not be constrained by your rate limits, and will not show up in the
+report you are asked for at the end of the quarter. If a governed model bill is the
+requirement, that is a harness choice, not a configuration one.
 
 ## Routes are per workspace
 
 This is the single most common surprise. Gateway routes are enabled per workspace, so a
-route that answers on one workspace 404s on another. During the build of this pack, on
-one workspace, the Anthropic route answered 200, the Codex route 404 and the Gemini
-route 400. That is why every launcher probes rather than promises, and why
-`RENDER-NOTES.md` distinguishes a route that was exercised from one that is merely
-documented.
+route that answers on one workspace 404s on another. During the build of this pack, on one
+workspace, the Anthropic route answered 200, the Codex route 404 and the Gemini route 400.
 
-| Probe result | What it means | Who fixes it |
+So nothing here promises you a route. Check the one you need before you plan around it,
+and treat a colleague's working setup as evidence about their workspace and not about
+yours.
+
+| Result | What it means | Who fixes it |
 | :--- | :--- | :--- |
 | 200 | The route is live for you | Nobody |
 | 404 | The route is not enabled on this workspace | A workspace administrator |
@@ -48,19 +69,24 @@ documented.
 
 ## Request tags, and why they are not optional
 
-Every launcher sets a `Databricks-Ai-Gateway-Request-Tags` header with three keys:
-`team`, `project`, `purpose`. They land in `system.ai_gateway.usage`, which is how spend
-gets an owner.
+Spend lands in `system.ai_gateway.usage` with a `request_tags` column, populated from the
+`Databricks-Ai-Gateway-Request-Tags` header. That column is how spend gets an owner, and
+it is the difference between a gateway that survives its first cost review and one that
+gets switched off.
 
-```sh
-export DAER_TEAM=your-team
-export DAER_PROJECT=your-project
-```
+Two practical points.
 
-An unset team is recorded as the literal `unset` rather than omitted. That is a
-deliberate choice: an absent tag is invisible in a `GROUP BY`, and a row that says
-`unset` shows up in the first query anyone runs. Untagged spend has no owner, and
-untagged spend is what gets a gateway switched off.
+**Confirm what actually arrives; do not assume it.** Whether your session carries tags
+depends on the harness and on how it was configured, and the only place that answers is
+the usage table itself — the query is at the end of this document. The usage-tracking
+reference in [`SOURCES.md`](SOURCES.md) is the authority on the header.
+
+**Agree the vocabulary before you have forty developers, not after.** Three keys are
+enough: `team`, `project`, `purpose`. Past spend cannot be retagged, because those rows
+are already written, so a month of untagged traffic is a month you will never be able to
+attribute. And where you can set a tag, set it to a literal `unset` rather than omitting
+it: an absent tag is invisible in a `GROUP BY`, whereas a row that says `unset` turns up
+in the first query anyone runs.
 
 ## What the governance actually gives an administrator
 
@@ -71,8 +97,8 @@ untagged spend is what gets a gateway switched off.
   control that actually constrains, so it is the one to reason about.
 - **Model choice.** Which routes exist at all.
 
-The admin-side setup is in the AI Gateway sources listed in `docs/SOURCES.md`. It is a
-workspace administrator's job and is out of scope for a developer setting up a laptop.
+The admin-side setup is in the AI Gateway sources listed in [`SOURCES.md`](SOURCES.md). It
+is a workspace administrator's job and is out of scope for a developer setting up a laptop.
 
 ## Governed MCP versus direct MCP
 
@@ -85,47 +111,75 @@ These look almost identical and are not:
 
 The first passes through the gateway: it appears in `system.ai_gateway.usage` and is
 subject to QPM limits. The second is still governed by Unity Catalog permissions — it is
-not a back door — but the gateway does not see it, so it is absent from your usage
-figures and unconstrained by your rate limits.
+not a back door — but the gateway does not see it, so it is absent from your usage figures
+and unconstrained by your rate limits.
 
-This pack renders only the governed route. A generated configuration that quietly
-bypassed the gateway would be worse than no generated configuration, because it would
-carry the authority of having been produced by a program.
+Every reference config in [`harness/`](../harness/) uses the governed route. If you paste
+a URL of the second shape into an `mcp.json` you have not done anything unsafe, but you
+have left the gateway's field of view, and the two lines look the same in review.
 
 Which of the server's tools a session may call is decided by Unity Catalog grants on the
 MCP service, not by the harness config. Grant narrowly.
 
 ## Tokens and their lifetime
 
-The launchers mint a short-lived token with `databricks auth token` and pass it in the
-environment. Two shapes result:
+Two tokens, two lifetimes, and the confusion between them accounts for a lot of wasted
+debugging.
 
-- **Claude Code** has a per-connection header helper, so MCP gets a fresh token for
-  every connection. That helper runs as a direct child of the harness process with your
-  full authority, which is why `.mcp.json` is a file whose edits are not routine.
-- **The other four** carry the launch-time token in a header, so it expires with the
-  token. A session that outlives it loses MCP and keeps working otherwise. Re-launch to
-  refresh.
+- **Model traffic.** `ug` mints and refreshes it. You do not handle it. `ug --refresh`
+  when a session starts failing.
+- **MCP.** The reference configs read `${DATABRICKS_TOKEN}` from the environment, so no
+  credential is written to a file you might commit. You export it yourself:
 
-That difference is stated in each harness's `RENDER-NOTES.md` rather than smoothed over.
+  ```sh
+  export DATABRICKS_TOKEN=$(databricks auth token | python3 -c 'import json,sys; print(json.load(sys.stdin)["access_token"])')
+  ```
 
-## What the launcher reaches, and what it does not
+  It is short-lived, and it expires inside a running session without the session ending.
 
-The whole mechanism is one line: the launcher sets the environment and `exec`s the
-harness. That reaches the process it starts and every child of it — which includes a
-shell opened inside your editor, and so a launcher run from VS Code's integrated
-terminal is governed exactly as one run from a standalone terminal.
+Learn the signature: **when workspace tools stop answering but the model keeps working,
+that is the MCP token, not the agent.** Re-export it and reconnect. The reverse — the
+model failing while tools work — is `ug --refresh`.
 
-It does not reach a process something else starts. An editor extension is started by
+## What governs a session, and what does not
+
+What governs a session is the configuration and environment of the process that was
+started, which reaches every child of it. A shell inside your editor is a child of that
+shell, so a harness started in VS Code's **integrated terminal** is governed exactly as
+one started in a standalone terminal.
+
+It does not reach a process something else starts. An editor **extension** is started by
 the editor, so its traffic is shaped by whatever environment the editor resolved for
-itself, not by a launcher run earlier in a different shell. Treat an extension session
-as unverified until a row for it appears in `system.ai_gateway.usage` under your
-request tags.
+itself. That is not a claim that extensions bypass the gateway. It is a claim that nobody
+here has proved it either way. Treat an extension session as unverified until a row for it
+appears in the usage table.
+
+## The only check that settles it
+
+A session that answers is not a session that went through the gateway. During the build of
+this pack, a session started with a deliberately invalid gateway token answered
+normally — it fell back to an ambient login. A client-side green tick proves that
+something answered, and nothing about who.
+
+Run this on the workspace, in a SQL editor or a notebook, within a few minutes of using a
+session:
+
+```sql
+SELECT request_time, model_name, request_tags
+FROM system.ai_gateway.usage
+WHERE request_time > current_timestamp() - INTERVAL 15 MINUTES
+ORDER BY request_time DESC
+```
+
+If your session is not in that table, it did not go through the gateway, whatever the
+client told you.
 
 ## What is not proved
 
-A launcher setting `ANTHROPIC_BASE_URL` is setting a default, not installing a control.
-During the build of this pack, a session started with a deliberately invalid gateway
-token answered normally by falling back to an ambient login. **A green probe does not
-prove that a session's own traffic went through the gateway.** Confirm from the gateway
-side, using the request tags — that query is the only answer that counts.
+- Setting a base URL is setting a **default**, not installing a control. A fallback path
+  that still exists will still be taken.
+- The Codex and OpenCode provider routes are written by `ug` but were not verified 200
+  on the workspace used to build this. Verify on yours with the query above.
+- Cursor and Copilot CLI model spend is ungoverned here by design of what `ug` configures
+  for them today. That is a current state, not a permanent one — re-check it rather than
+  quoting this page in a year.

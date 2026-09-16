@@ -16,7 +16,7 @@ does not prove any particular statement on it — which is why the documents in 
 pack name the mechanism they are describing rather than citing a page and leaving the
 reader to find the sentence.
 
-Re-check with `make check-live`. The interval is 90 days; last checked **2026-09-15**.
+Re-check with `make links-live`. The interval is 90 days; last checked **2026-09-15**.
 
 52 candidates were checked, 51 answered 200, 1 did not.
 

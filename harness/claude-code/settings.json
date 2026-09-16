@@ -18,17 +18,13 @@
       "Bash(git restore:*)",
       "Bash(git stash:*)",
       "Bash(git worktree:*)",
-      "Bash(make check:*)",
-      "Bash(make docs:*)",
-      "Bash(make test:*)",
-      "Bash(make e2e:*)",
-      "Bash(make doctor:*)",
       "Bash(npm run:*)",
       "Bash(npm test:*)",
       "Bash(npm ci:*)",
       "Bash(pytest:*)",
       "Bash(uv run:*)",
-      "Bash(python3 scripts/:*)",
+      "Bash(databricks current-user me:*)",
+      "Bash(databricks apps list:*)",
       "WebFetch(domain:docs.databricks.com)",
       "WebFetch(domain:developers.databricks.com)",
       "WebFetch(domain:code.claude.com)",
@@ -51,29 +47,12 @@
       "Bash(gh release create:*)",
       "Bash(databricks bundle deploy:*)",
       "Bash(databricks bundle destroy:*)",
-      "Bash(security find-generic-password:*)"
-    ]
-  },
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PROJECT_DIR}/harness/claude-code/hooks/pretooluse-guard.sh"
-          }
-        ]
-      },
-      {
-        "matcher": "mcp__.*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PROJECT_DIR}/harness/claude-code/hooks/pretooluse-guard.sh"
-          }
-        ]
-      }
+      "Bash(security find-generic-password:*)",
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(~/.databrickscfg)",
+      "Read(~/.aws/**)",
+      "Read(**/*.pem)"
     ]
   }
 }

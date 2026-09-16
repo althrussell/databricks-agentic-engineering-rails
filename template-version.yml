@@ -1,8 +1,9 @@
 # template-version.yml — which rails this is, and what they were actually run
 # against.
 #
-# `scripts/doctor.sh` and `scripts/build-docs.py` both read `version` from here, so
-# a checkout can say which rails it is on without archaeology.
+# `scripts/doctor.sh` reads `version` and the `verified_against` blocks from here, so
+# a checkout can say which rails it is on, and what they were run against, without
+# archaeology.
 #
 # `verified_against` is a record, not a requirement. `verified` means the pack was
 # exercised with that version on that platform. `expected` means the code is
@@ -48,27 +49,12 @@ verified_against:
     note: >-
       3.12 is the floor because the Unity Gateway CLI requires 3.12 or later.
       Earlier versions are not supported by that dependency, not merely
-      untested.
+      untested. Nothing in this repository is written in Python; this is the
+      version `ug` runs on.
   uv:
     version: "0.11.15"
     status: verified
-  pandoc:
-    version: "3.11"
-    status: verified
-  typst:
-    version: "0.15.1"
-    status: verified
-  opentofu:
-    version: "1.12.6"
-    status: verified
-  terraform:
-    version: "not installed"
-    status: not-verified
     note: >-
-      The admin configuration is written to the Databricks provider and is
-      expected to work under Terraform, but only OpenTofu was exercised.
-      OpenTofu was chosen because a publicly forkable repository should not
-      require a BUSL-licensed binary. Treat Terraform compatibility as untested
-      rather than as parity.
+      Used only to install the Unity Gateway CLI, which is a Python tool.
 
 breaking_changes: []

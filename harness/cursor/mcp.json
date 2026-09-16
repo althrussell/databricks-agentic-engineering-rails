@@ -3,7 +3,7 @@
     "databricks": {
       "url": "https://REPLACE-WITH-YOUR-WORKSPACE-HOST/ai-gateway/mcp-services/REPLACE.WITH.YOUR_MCP_SERVICE",
       "headers": {
-        "Authorization": "Bearer ${DAER_MCP_TOKEN}"
+        "Authorization": "Bearer ${DATABRICKS_TOKEN}"
       }
     }
   }

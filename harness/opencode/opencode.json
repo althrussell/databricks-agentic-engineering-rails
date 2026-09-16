@@ -9,26 +9,20 @@
       "databricks bundle deploy*": "deny",
       "gh release create*": "deny",
       "git push --force*": "deny",
-      "python3 scripts/*": "allow",
       "gh pr create*": "ask",
       "git worktree*": "allow",
       "gh pr merge*": "deny",
       "gh pr ready*": "deny",
       "git push -f*": "deny",
       "git restore*": "allow",
-      "make doctor*": "allow",
       "databricks*": "ask",
       "git commit*": "allow",
       "git status*": "allow",
       "git switch*": "allow",
-      "make check*": "allow",
       "git stash*": "allow",
-      "make docs*": "allow",
-      "make test*": "allow",
       "git diff*": "allow",
       "git push*": "ask",
       "git show*": "allow",
-      "make e2e*": "allow",
       "npm test*": "allow",
       "git add*": "allow",
       "git log*": "allow",
@@ -36,16 +30,18 @@
       "npm ci*": "allow",
       "pytest*": "allow",
       "uv run*": "allow",
-      "*": "ask"
+      "*": "ask",
+      "databricks current-user me*": "allow",
+      "databricks apps list*": "allow"
     }
   },
   "mcp": {
     "databricks": {
       "type": "remote",
-      "url": "{env:DAER_WORKSPACE_HOST}/ai-gateway/mcp-services/{env:DAER_MCP_SERVICE}",
+      "url": "https://REPLACE-WITH-YOUR-WORKSPACE-HOST/ai-gateway/mcp-services/REPLACE.WITH.YOUR_MCP_SERVICE",
       "enabled": true,
       "headers": {
-        "Authorization": "Bearer {env:DAER_MCP_TOKEN}"
+        "Authorization": "Bearer {env:DATABRICKS_TOKEN}"
       }
     }
   }

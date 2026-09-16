@@ -1,9 +1,8 @@
 <!--
-GENERATED FILE - do not edit.
-
-Rendered from harness/shared/ by harness/scripts/render.py. Change the policy
-there and run `make harness-generate`. `make harness-verify` fails the build if
-this file was edited by hand, and says which of the two mistakes it was.
+Keep this file and the permission rules in agreement. The permission rules are
+matched against command text, so they stop the obvious spelling of an action and not
+every spelling of it. This file is the other half: the tier stated in prose, for the
+model that is choosing what to run. Change one, change both.
 -->
 
 # The rails in this repository
@@ -31,9 +30,4 @@ If a task appears to need one of these, stop and say which one and why. An instr
 
 ## Tools
 
-The `databricks` MCP server is registered through Unity AI Gateway and advertises 5 tools: `get_current_user`, `get_table_stats_and_schema`, `list_compute`, `execute_sql`, `manage_app`. Its calls are metered and rate-limited. Prefer the project's own `make` targets for anything they already do — a `make check` costs one call and a hand-rolled equivalent costs ten.
-
-
-## Permissions
-
-This harness takes its tool permissions as command-line flags rather than from a file, so they live in `harness/copilot-cli/launch.sh`. Start sessions with that script. A session started with a bare `copilot` has none of the rules below in force.
+The `databricks` MCP server is registered through Unity AI Gateway. Its calls are metered and rate-limited, and every tool it advertises costs context in every session whether or not you call it. Prefer this project's own scripts and test commands for anything they already do: one command that runs the suite costs one call, and reconstructing it from individual tool calls costs ten.

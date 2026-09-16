@@ -35,7 +35,13 @@ would have made deliberately.
 
 | # | Decision | Status |
 |---|---|---|
-| [0001](0001-generate-every-harness.md) | Five harnesses generated, each labelled by what it can enforce | accepted |
-| [0003](0003-pdf-toolchain.md) | pandoc + typst, bundled fonts, stable rebuilds | accepted |
+| [0001](0001-generate-every-harness.md) | Five harnesses, each labelled by what it can enforce | partially superseded by 0006 |
 | [0004](0004-posix-sh-for-diagnostics.md) | The doctor and the link checker carry no interpreter | accepted |
 | [0005](0005-the-gate-is-a-command.md) | The gate is a command, not a workflow file | accepted |
+| [0006](0006-guidance-over-machinery.md) | Guidance over machinery: no generator, no PDF pipeline | accepted |
+
+0002 and 0003 are absent. 0002 was never written. 0003 recorded a PDF toolchain that
+0006 removed; rather than keep a hundred lines describing a pipeline no longer in the
+repository, it was deleted and named in 0006, with its full reasoning left in git
+history. A record with a live decision in it is never deleted — that is what the
+`superseded by` status is for, and 0001 uses it.

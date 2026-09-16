@@ -25,10 +25,11 @@ how documentation rots without anyone noticing.
   load-bearing claim, with the URL, the HTTP status it returned and the date it
   was read. A claim that cannot name its source does not appear in the pack.
 - **"verified"** means a real call over that route returned 200 during the
-  build. It appears in a generated `RENDER-NOTES.md` only where that happened.
-- **"documented"** means the route was probed and the behaviour is described by
-  the source, but nothing was exercised. It is the weaker label and it is used
-  more often than the strong one.
+  build. Only one route earned that word: the Anthropic model route, from Claude
+  Code, on one workspace.
+- **"documented"** means the source describes the behaviour and nothing here
+  exercised it. It is the weaker label and it is used far more often than the
+  strong one — including for the Codex and OpenCode gateway routes.
 - **"we read that source on that date and it said that"** is the strongest claim
   made about any external system's behaviour. It does not mean the behaviour is
   guaranteed, and it does not mean the source still says it today. Check the date
@@ -43,23 +44,26 @@ anything:
 
 - **Gateway route availability is per workspace.** On the build workspace the
   Anthropic route answered 200, the Codex route returned 404 and the Gemini route
-  returned 400. This is why every generated launcher probes your own workspace
-  rather than trusting a list, and why `docs/00-start-here.md` does not name a
-  recommended harness.
+  returned 400. This is why nothing here promises you a route, and why
+  `docs/00-start-here.md` does not name a recommended harness.
 - **Not every harness is governed the same way.** Cursor and GitHub Copilot CLI
   route MCP traffic through Unity AI Gateway but **not** model traffic. Codex has
-  no rule list and no pre-execution hook, so its never-automatic tier is written
-  into `AGENTS.md` and enforced by a human reading the diff. Each harness's
-  `RENDER-NOTES.md` states its own limits, and the comparison table in
-  `docs/00-start-here.md` carries them as columns rather than as footnotes.
-- **Only OpenTofu was exercised** for infrastructure-as-code. The configuration
-  targets the Databricks provider and is expected to work with Terraform, but
-  Terraform was not installed and not tested. Treat parity as untested.
+  no rule list at all, so its never-automatic tier is prose in `AGENTS.md` and is
+  enforced by a human reading the diff. Each harness's `SETUP.md` ends with what
+  that harness cannot express, and the comparison table in
+  `docs/00-start-here.md` carries the differences as columns rather than as
+  footnotes.
+- **Nothing here enforces a permission tier before a command runs.** An earlier
+  version of this pack shipped a pre-execution hook for Claude Code. It was
+  removed, for the reasons in
+  `docs/DECISIONS/0006-guidance-over-machinery.md`. What is left is text
+  matching, review, and — on two harnesses — a working-directory fence.
 - **Nothing was verified against a workspace you control.** Entitlements,
   permissions, network egress rules and available models all differ. Run
-  `./scripts/doctor.sh` and your harness's `launch.sh --explain` on your own
-  workspace; both are built to produce evidence about *your* environment rather
-  than to repeat ours.
+  `./scripts/doctor.sh --live` on your own machine, then the usage-table query in
+  `docs/03-gateway-auth.md` on your own workspace. Both produce evidence about
+  *your* environment rather than repeating ours, and the second is the only one
+  that can settle whether a session was governed.
 
 ## One misreading that costs money
 
@@ -68,8 +72,8 @@ block thresholds are enforced approximately from a near-real-time cost estimate,
 that requests already in flight are not interrupted, and that Databricks is not
 responsible for costs incurred above a configured threshold. Size a budget as
 near-real-time protection against a runaway, not as a spending limit you can
-rely on. This is repeated in `docs/03-gateway-auth.md`, and it is repeated here
-because it is the one item where believing the friendlier reading has a bill
+rely on. This is stated in `docs/03-gateway-auth.md` too, and it is repeated
+here because it is the one item where believing the friendlier reading has a bill
 attached.
 
 ## Trademarks and branding
@@ -77,8 +81,7 @@ attached.
 Every product name in this repository is used nominatively — to name the thing
 being written about. No endorsement, affiliation or sponsorship is claimed or
 implied, and no Databricks logo, wordmark or other brand asset is reproduced
-here or in the PDFs this repository builds. See `NOTICE` for the full
-attribution list.
+anywhere in this repository. See `NOTICE` for the full attribution list.
 
 ## Your data
 

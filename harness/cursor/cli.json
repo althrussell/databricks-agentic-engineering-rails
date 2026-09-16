@@ -13,17 +13,13 @@
       "Shell(git restore)",
       "Shell(git stash)",
       "Shell(git worktree)",
-      "Shell(make check)",
-      "Shell(make docs)",
-      "Shell(make test)",
-      "Shell(make e2e)",
-      "Shell(make doctor)",
       "Shell(npm run)",
       "Shell(npm test)",
       "Shell(npm ci)",
       "Shell(pytest)",
       "Shell(uv run)",
-      "Shell(python3 scripts/)"
+      "Shell(databricks current-user me)",
+      "Shell(databricks apps list)"
     ],
     "deny": [
       "Shell(git push --force)",

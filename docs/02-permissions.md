@@ -1,8 +1,9 @@
 # Permissions
 
-Three tiers. The whole policy is `harness/shared/permissions.yml`, and it is short
-enough to read in one sitting, which is deliberate: a permission policy nobody has read
-is a permission policy nobody follows.
+Three tiers. Whichever harness you use, the policy is one short file you can read in a
+sitting — that is deliberate, because a permission policy nobody has read is a
+permission policy nobody follows. The reference copies are in
+[`harness/`](../harness/), one per harness, in each harness's own format.
 
 ## The three tiers
 
@@ -34,52 +35,55 @@ reversible and empty where it is not, and the asking default catches the rest.
 That is also why the never-automatic tier is not implemented as an ask. An action that
 cannot be undone should not be reachable by a keystroke that has become muscle memory.
 
-## One policy, five renderings
+## The five harnesses do not enforce the same things
 
-`harness/shared/permissions.yml` is written in a vocabulary that belongs to no harness:
+The tiers above are the same everywhere. What a harness can do about them is not, and
+the difference decides which one you should use for work that matters.
 
-```
-tool(Read)              a named capability the harness provides
-shell(git status)       a command, matched on its leading text
-net.fetch(host)         an outbound fetch to one host
-mcp(server.tool)        one tool on one MCP server
-mcp(*)                  every MCP tool
-```
+| Harness | Auto-allow | Ask | Never automatic |
+| :--- | :--- | :--- | :--- |
+| Claude Code | `permissions.allow` | `permissions.ask` | `permissions.deny` — a text match |
+| OpenCode | `permission.bash` allow | `"*": "ask"` catch-all | `deny` verdicts — a text match |
+| Cursor CLI | `permissions.allow` | by omission, not by statement | `permissions.deny` — a text match |
+| Codex CLI | `approval_policy` | `approval_policy` | **nothing** — prose in `AGENTS.md` only |
+| Copilot CLI | `--allow-tool` flags | default | `--deny-tool` flags, if you passed them |
 
-`make harness-generate` renders that into each harness's own format. The renderer's
-first rule is that **a capability it cannot express raises an error rather than being
-dropped**, because a permission tier that vanished during rendering leaves a
-configuration that still looks careful. The only escape is a recorded substitution
-naming the mechanism used instead — and the renderer then checks that the mechanism is
-really present in the file it produced.
+Codex is the row to read twice. It has no rule list and no pre-execution hook, so its
+never-automatic tier is a paragraph in `AGENTS.md` and a human reading the diff. That is
+a real cost, and it is the reason the tier is also written in prose for every harness:
+prose is the only mechanism all five share.
 
-Read `harness/<name>/RENDER-NOTES.md` for what your harness could not express. It is
-different for each one, and it is generated, so it cannot drift from the configuration
-it describes.
+## What actually enforces this, and what merely describes it
 
-## What actually enforces this
+This is the distinction worth carrying away from the page.
 
-Two mechanisms, and it matters which one you are relying on:
+**A permission rule is a text match.** It is matched against the command the model
+wrote, after the harness splits compound commands and strips a short list of wrappers.
+It is not a boundary around the program. A rule anchored on `git push --force` stops
+that spelling and not `git -c x=y push --force`, not a quoted subcommand, not a flag
+moved after the refspec. Rules stop the accident, which is most of what happens. They do
+not stop an adversary, and nothing in a config file will.
 
-**Permission rules** match command text. They stop the canonical spelling of an action
-and leave no record. They are bypassed by an unusual spelling: a global option before
-the subcommand, a quoted subcommand, a flag moved after the refspec.
+**A sandbox removes the capability.** Codex's `sandbox_mode = "workspace-write"` fences
+writes to the directory the session started in. That is a different kind of statement
+from a deny list: it does not need to predict the spelling. Of the five harnesses it is
+the only one here with a fence of that kind, which is worth weighing against its empty
+cell in the table above.
 
-**The guard** — `harness/shared/guards/never-automatic.sh` — normalises the text first,
-then classifies it, then writes one line per decision to `.daer/guard-journal.jsonl`.
-Where a harness supports a pre-execution hook, this runs before the command does. Where
-it does not, run the guard in CI over anything scripted.
+**An asking default catches what the list forgot.** OpenCode's `"*": "ask"` is the
+cheapest strong control in this whole document. Anything not named is a prompt, so a
+rule missing from the allow tier costs one keystroke instead of opening a hole.
 
-Deploy both where you can. A tier enforced only by rules is bypassed by a spelling; a
-tier enforced only by a guard is bypassed by a broken interpreter, which is why the
-adapter denies rather than allows when it cannot run.
+**An instruction file is not enforcement.** `CLAUDE.md`, `AGENTS.md` and `rails.mdc`
+state the tier for the model that is choosing what to run. That genuinely changes
+behaviour and it is not a control: a model can be argued out of it, and content in a
+file it reads can do the arguing. Ship it as well as the rules, never instead of them.
 
-```sh
-./harness/scripts/deny-proof.sh
-```
-
-Forty-six cases: commands that must be refused and commands that must not be. A guard
-that denies everything fails that as loudly as one that denies nothing.
+An earlier version of this pack shipped a pre-execution hook of its own that normalised
+command text before matching it. It was removed along with the rest of the custom code
+— see [`DECISIONS/0006`](DECISIONS/0006-guidance-over-machinery.md) — and its removal is
+why this section is blunter than it used to be. What you have is text matching plus, on
+one harness, a real fence. Plan for that rather than for what a diagram promises.
 
 ## The limits, stated plainly
 
@@ -89,5 +93,9 @@ that denies everything fails that as loudly as one that denies nothing.
 - **Text matching is not containment.** An action expressed as base64, or written to a
   script and then run, or taken through a runtime's own process API, is not a command
   line the guard sees.
-- **`~/.claude` and `~/.codex` are denied on purpose.** An agent that can rewrite its
-  own permission rules does not have permission rules.
+- **Deny reads of your own credential files.** `~/.databrickscfg`, `.env`, `~/.aws`,
+  anything `*.pem`. The reference `settings.json` does this. It is a text match like
+  everything else, so treat it as removing the accident.
+- **An agent that can rewrite its own permission rules does not have permission
+  rules.** Keep `.claude/settings.json`, `opencode.json` and `~/.codex/config.toml` off
+  the auto-allow list for writes, and review changes to them like any other config.

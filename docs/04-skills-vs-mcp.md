@@ -23,26 +23,27 @@ tool. By then the first message of every session carries several thousand tokens
 schema that no one chose, the model has twelve plausible-looking options for every
 request, and quality drops in a way that is very hard to attribute.
 
-`harness/shared/mcp.yml` states four ceilings and `scripts/tool-budget.py` measures
-against them:
+Two things about that cost are worth knowing before you try to manage it.
 
-```sh
-python3 scripts/tool-budget.py            # from committed files
-python3 scripts/tool-budget.py --live     # connect and measure what is really sent
-```
+**You cannot read the real figure off your own config.** The tool schemas are advertised
+by the server when the client connects, and they are usually the largest part of the
+bill. Counting the bytes in your `mcp.json` measures the registration, not the schemas,
+so any offline number is a **lower bound** — treat one as such, and be suspicious of any
+tool that reports a total without having connected. The way to see the true cost is to
+connect and look at what the server sends.
 
-The offline figure is reported as a **lower bound**, labelled as one, because the tool
-schemas are advertised by the server at connect time and are usually the largest
-component. An estimate that quietly omitted them and compared the remainder to a ceiling
-would report a pass it had not earned. `--live` turns the bound into a measurement.
+**Then compare what is advertised against what you allow**, in both directions, because
+each mismatch is a different fault:
 
-It also compares the allowlist against what the server actually advertises, in both
-directions:
-
-- **Advertised but not allowed** — context spent in every session on a schema whose
-  calls the permission rules will refuse. Pure waste, and invisible.
+- **Advertised but not allowed** — you pay context in every session for a schema whose
+  calls your permission rules will refuse. Pure waste, and invisible.
 - **Allowed but not advertised** — a line of policy that constrains nothing while
   reading as though it does.
+
+The practical discipline is a budget you set deliberately: decide how many tools a
+session should carry, keep the allowlist to the ones you named, and re-check when you
+add a server. Copilot CLI's `mcp-config.json` has an explicit `tools` array for this,
+which is the shape to imitate even where the harness does not require it.
 
 ## How to decide, in practice
 
@@ -54,11 +55,11 @@ session, with a schema the model will try to use. The failure modes are not symm
 so the bar is not the same height.
 
 Then ask whether the harness could already do it with a shell command. A great many MCP
-servers wrap something that `git`, `curl` or the project's own `make` targets already do,
-and a shell command costs nothing until it is called, is covered by the permission tiers
-you already wrote, and appears in the guard journal. **Prefer a `make` target over an
-MCP tool whenever one will do** — a `make check` is one call where a hand-rolled
-equivalent is ten.
+servers wrap something `git`, `curl`, the Databricks CLI or the project's own scripts
+already do, and a shell command costs nothing until it is called and is covered by the
+permission tiers you have already written. **Prefer a command over an MCP tool whenever
+one will do** — one script that runs your suite is one call, where reconstructing it
+from individual tool calls is ten.
 
 | You want to add | Use | Because |
 | :--- | :--- | :--- |
@@ -66,7 +67,7 @@ equivalent is ten.
 | A repeatable multi-step procedure | Skill | Instructions, not a new capability |
 | Read from Unity Catalog | MCP, governed route | A real capability, and it should be metered |
 | Query a warehouse | MCP, governed route | Same |
-| Anything the CLI already does | Shell command in the auto-allow tier | Free until called, already governed |
+| Anything the Databricks CLI already does | Shell command in the auto-allow tier | Free until called, already governed |
 | A wrapper around `git` | Shell command | Almost never worth the context |
 
 ## Governing MCP
@@ -79,8 +80,9 @@ Register through the gateway, not directly:
 ```
 
 Both respect Unity Catalog permissions. Only the first appears in
-`system.ai_gateway.usage` and is subject to rate limits. `docs/03-gateway-auth.md` has
-the detail; this pack's generated configuration uses the governed route only.
+`system.ai_gateway.usage` and is subject to rate limits.
+[`03-gateway-auth.md`](03-gateway-auth.md) has the detail; every reference config in
+[`harness/`](../harness/) uses the governed route only.
 
 Which tools a session may call is a Unity Catalog grant on the MCP service, not a harness
 setting. The harness allowlist is a second, weaker fence — it stops an accident, and it
@@ -95,5 +97,9 @@ cover, and let them be loaded on relevance rather than always. A skill that is a
 loaded is an instruction file, and an instruction file that has grown past a page or two
 gets skimmed by the model exactly the way it gets skimmed by people.
 
-`scripts/tool-budget.py` counts always-loaded instruction bytes against a ceiling too,
-for the same reason it counts tool schemas.
+Give an always-loaded instruction file the same scrutiny you give a tool schema, and
+for the same reason: it is in the prompt of every session whether it is relevant or not.
+The one file in this pack that is deliberately always-loaded is the never-automatic tier,
+because a rule about what must not happen automatically is useless if it arrives only
+when something already looks relevant. Everything else earns its place or gets loaded on
+demand.

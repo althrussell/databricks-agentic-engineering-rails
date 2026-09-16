@@ -4,7 +4,7 @@
 # `main` + `/docs` — there is no workflow file, no Actions run and no build step
 # in this repository, because the destination this pack is delivered into runs no
 # Actions at all. Same constraint that shaped the gate; see
-# DECISIONS/0005-forge-agnostic-gate.md.
+# DECISIONS/0005-the-gate-is-a-command.md.
 #
 # Consequences of "plain" that are worth knowing before editing this file:
 #
@@ -35,7 +35,8 @@ theme: jekyll-theme-primer
 #                                 render as a page. Every document in this pack
 #                                 is a plain .md file, and adding front matter to
 #                                 all of them would put site machinery into files
-#                                 that also ship as PDFs.
+#                                 that are also read directly on GitHub and in an
+#                                 editor.
 #   jekyll-relative-links         rewrites relative links between .md files to
 #                                 their published URLs. Without it, every
 #                                 cross-reference in these documents would 404 on
@@ -46,13 +47,11 @@ plugins:
   - jekyll-optional-front-matter
   - jekyll-relative-links
 
-# Not part of the site.
+# There is deliberately no `exclude:` list. Every file under docs/ is either a
+# document or an image, and all of them are meant to be published.
 #
-#   theme/            the PDF theme: a Typst template used by `make docs`, not
-#                     read in a browser.
-#
-# `README.md` was here and is deliberately gone. Two reasons, and only the first is
-# proven:
+# `README.md` was here once and is deliberately gone. Two reasons, and only the first
+# is proven:
 #
 #   An entry here is matched at every depth, not just at the docs/ root. It was added
 #   to guard against a future docs/README.md, and as written it also covered
@@ -66,17 +65,19 @@ plugins:
 #   gems, which need a compiler this machine does not currently have. Removed on the
 #   first reason alone.
 #
+# If a future edit does need an exclude list: scripts/link-check.sh reads it and
+# reports any link that points into it, so a file excluded here and linked from a
+# page fails the internal lane rather than 404ing for a reader.
+#
 # Worth knowing when reading the two paths above: `jekyll-readme-index` is on by
 # default on GitHub Pages, and it publishes a directory's README.md as that
 # directory's index. So docs/DECISIONS/README.md is served at DECISIONS/ and never at
 # DECISIONS/README. A docs/README.md would therefore become the site index and shadow
 # index.md — which is the case the original entry was reaching for, and the reason to
 # handle it by not creating that file rather than by excluding a name.
-exclude:
-  - theme/
 
-# Markdown settings matching the PDF pipeline as closely as the Pages build
-# allows, so a heading that anchors correctly here anchors correctly there.
+# Markdown settings chosen so a heading anchors the same way here as it does in the
+# GitHub file view: GFM input, no hard wrap, and the highlighter Pages ships.
 markdown: kramdown
 kramdown:
   input: GFM

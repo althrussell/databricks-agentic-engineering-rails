@@ -1,72 +1,66 @@
 # harness/
 
-One written policy, five renderings of it, and the scripts that keep those
-descriptions true.
+Reference configuration for five coding harnesses. Copy the directory for the one you
+use; ignore the rest.
+
+Nothing here is generated and nothing here is ours to run. Each file is a small,
+hand-maintained configuration in the harness's own documented format, so what you read
+is what the harness reads — and you can diff it against your own config without
+learning a build step first.
 
 ## The layout
 
 | Path | What it is |
 | :--- | :--- |
-| `shared/` | The policy. Permission tiers, gateway routing, MCP registration and the guard, each written once in a harness-neutral vocabulary. |
-| `claude-code/`, `codex/`, `cursor/`, `copilot-cli/`, `opencode/` | One directory per harness. Every file generated from `shared/`, except the hand-written `SETUP.md`. |
-| `scripts/` | Generate, verify, prove. |
+| `claude-code/`, `codex/`, `cursor/`, `copilot-cli/`, `opencode/` | One directory per harness: a `SETUP.md` and the two or three config files it tells you to copy. |
 
-Each harness directory carries three things worth reading in this order:
+Each directory holds:
 
-1. **`SETUP.md`** — the 30-minute path. Install, configure, launch, verify. Written
-   by hand, because an install path is prose and the generator has no business
-   inventing it.
-2. **`RENDER-NOTES.md`** — generated. What this harness *cannot* express, and what
-   was substituted rather than rendered. Read it before you trust the config.
-3. **`.generated.sha256`** — the manifest `verify.sh` checks against.
+1. **`SETUP.md`** — the 30-minute path. Install, log in, point it at the gateway, copy
+   the config, confirm it worked. Start here.
+2. **A permission configuration** in that harness's own format — `settings.json`,
+   `config.toml`, `cli.json`, `opencode.json`, or command-line flags where the harness
+   has no file for it.
+3. **An instruction file** — `AGENTS.md`, `CLAUDE.md`, `rails.mdc` or
+   `copilot-instructions.md` — carrying the never-automatic tier in prose.
 
-## The one rule
-
-**Edit `shared/`, never a generated file.** `./harness/scripts/generate.sh` renders;
-`./harness/scripts/verify.sh` fails the build if a generated file was touched by
-hand. The checker separates two failures that produce an identical diff and mean
-opposite things — the policy moved and nobody regenerated, or someone edited the
-output and is about to lose the change — because a checker that reported both as
-"files differ" would train people to run the generator until the message went away.
-
-One inputs digest covers all five directories, because they share a launcher
-template. Editing `shared/` therefore marks every directory stale at once, which is
-correct: the policy moved, so every rendering of it is out of date.
-
-## Commands
-
-| Command | What it does | Needs a workspace? |
-| :--- | :--- | :--- |
-| `make harness-generate` | Render `shared/` into all five harness directories | No |
-| `make harness-verify` | Fail if a generated file drifted from the policy | No |
-| `make harness-deny-proof` | Run the guard against 46 cases: 27 that must be denied, 19 that must be allowed | No |
-| `make tool-budget` | Measure what the MCP registration costs in context, against the stated ceilings | No |
-| `make tool-budget-live PROFILE=x` | The same, with the tool schemas measured from the live governed route rather than estimated | **Yes** |
-
-The first four are in `make check`. The last is not: it needs a credential and a
-workspace, so a pass would mean different things on different machines.
+The last two are a pair, and the reason is worth stating once. A permission rule is
+matched against the **text of a command**, so it stops the obvious spelling of an action
+and not every spelling of it. The instruction file is the same tier written for the
+model that is choosing what to run. Neither is sufficient alone. Change one, change the
+other.
 
 ## The five are not equivalent
 
-They are all generated, and they do not all enforce the same things. Two differences
-decide most of it:
+Two differences decide most of the choice between them.
 
-- **Model traffic through Unity AI Gateway.** Claude Code, Codex and OpenCode: yes.
-  Cursor: no — `ug cursor` registers MCP servers only. Copilot CLI: no.
-- **The never-automatic tier.** Claude Code enforces it with a `PreToolUse` hook.
-  OpenCode expresses it as a `deny` verdict. Cursor has a deny list but no ask tier.
-  Copilot CLI carries it as launch flags. Codex has no rule list and no hook at all,
-  so its never-automatic tier is written into `AGENTS.md` and enforced by a human
-  reading the diff.
+**Model traffic through Unity AI Gateway** — whether your spend is attributable:
 
-`docs/00-start-here.md` has the full comparison table. Each harness's own
-`RENDER-NOTES.md` says the same thing about that harness and nothing about the
-others, so you cannot mistake one for another.
+| Harness | Model traffic | How |
+| :--- | :--- | :--- |
+| Claude Code | Governed, verified | `ug claude` sets the Anthropic route; a real call returned 200 |
+| Codex CLI | Governed, route not verified here | `ug codex` writes a provider block; the route 404'd on the workspace this was built against |
+| OpenCode | Governed, route not verified here | `ug opencode` writes a provider block in `opencode.json` |
+| Cursor CLI | **Not governed** | `ug cursor` registers MCP only; no documented custom model endpoint |
+| Copilot CLI | **Not governed** | `ug copilot` registers MCP only; no documented custom model endpoint |
+
+**What actually constrains the session**, as opposed to describing the constraint:
+
+| Harness | The real fence |
+| :--- | :--- |
+| Codex CLI | `sandbox_mode = "workspace-write"` — writes are fenced to the working tree |
+| OpenCode | `"*": "ask"` — an unlisted command is a prompt, not an allow |
+| Claude Code | A `deny` list, matched on command text. No working-directory sandbox |
+| Cursor CLI | A `deny` list, matched on command text |
+| Copilot CLI | `--deny-tool` flags, present only if you started the session with them |
+
+Read down the second table before quoting the first. A governed route tells you where
+the spend is recorded; it says nothing about what the session can do to your machine.
 
 ## Where to start reading
 
 - **Setting yourself up:** `<your harness>/SETUP.md`. Nothing else is required.
-- **Deciding whether to trust it:** `<your harness>/RENDER-NOTES.md`, and
-  specifically its closing section on what was not proved.
-- **Changing the policy:** `shared/README.md`.
-- **Understanding why it is built this way:** `../docs/DECISIONS/`.
+- **Deciding whether to trust it:** [`../docs/02-permissions.md`](../docs/02-permissions.md),
+  and the "what this harness cannot express" section in your `SETUP.md`.
+- **Understanding the gateway:** [`../docs/03-gateway-auth.md`](../docs/03-gateway-auth.md).
+- **Why it is shaped this way:** [`../docs/DECISIONS/`](../docs/DECISIONS/).

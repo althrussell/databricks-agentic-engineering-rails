@@ -1,28 +1,26 @@
-# GENERATED FILE - do not edit.
+# Merge these blocks into ~/.codex/config.toml.
 #
-# Rendered from harness/shared/ by harness/scripts/render.py. Change the policy
-# there and run `make harness-generate`. `make harness-verify` fails the build if
-# this file was edited by hand, and says which of the two mistakes it was.
-#
-# Merge into ~/.codex/config.toml. Codex has no project-scoped config file,
-# so this is a fragment for your own machine rather than a file to commit
-# into a project. Two values are yours to fill in — see SETUP.md.
+# Codex CLI has no project-scoped config file, so this is a fragment for your own
+# machine rather than a file to commit into a project. Two values are yours to fill
+# in — see SETUP.md.
 
 # The ask tier. Codex asks before acting outside the workspace scope below.
 approval_policy = "on-request"
 
-# The working-tree fence. Writes inside the directory Codex was started in,
-# prompts for anything outside it.
+# The working-tree fence. Writes inside the directory Codex was started in, and a
+# prompt for anything outside it. This is the control that actually constrains: it
+# removes the capability rather than pattern-matching the command text.
 sandbox_mode = "workspace-write"
 
 [sandbox_workspace_write]
-# On, because the auto-allow tier includes `npm ci` and `uv run`. There is no
-# per-host list here; see RENDER-NOTES.md.
+# On, because the auto-allow tier includes `npm ci` and `uv run`, which fetch. There
+# is no per-host allowlist at this layer, so "on" means any host.
 network_access = true
 
-# The governed MCP route. The token comes from the environment rather than
-# from this file, so no credential is written to disk. Your launcher sets it:
-#   ./harness/codex/launch.sh
+# The governed MCP route. The token comes from the environment rather than from this
+# file, so no credential is written to disk. Get one into the environment with:
+#   export DATABRICKS_TOKEN=$(databricks auth token --profile your-profile | \
+#     python3 -c 'import json,sys; print(json.load(sys.stdin)["access_token"])')
 [mcp_servers.databricks]
 url = "https://REPLACE-WITH-YOUR-WORKSPACE-HOST/ai-gateway/mcp-services/REPLACE.WITH.YOUR_MCP_SERVICE"
-bearer_token_env_var = "DAER_MCP_TOKEN"
+bearer_token_env_var = "DATABRICKS_TOKEN"

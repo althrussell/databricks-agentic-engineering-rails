@@ -17,90 +17,23 @@ Other product names are the trademarks of their respective owners. Every use in
 this repository is nominative: it names the product being written about, and
 neither claims nor implies endorsement, affiliation or sponsorship. No
 Databricks logo, wordmark or other brand asset is reproduced anywhere in this
-repository or in the PDFs it builds.
+repository.
 
 
 NOTHING IS VENDORED
 -------------------
 
 As of the commit that carries this file, no third-party source code, font file
-or binary is copied into this repository. Everything below is a build-time or
-run-time dependency that the reader installs themselves, and every licence
-below is the dependency's own, not a grant made by this project. This section
-exists so that the day something *is* vendored, the omission is visible.
+or binary is copied into this repository. Everything named below is a tool the
+reader installs themselves, and every licence below is that tool's own, not a
+grant made by this project. This section exists so that the day something *is*
+vendored, the omission is visible.
 
 
-FONTS EMBEDDED IN THE PDFs
---------------------------
+TOOLS THIS PACK TELLS YOU TO INSTALL
+------------------------------------
 
-The PDFs this repository builds embed font subsets. The fonts are the four that
-typst bundles; docs/theme/pack.typ is restricted to them and the build passes
-`--ignore-system-fonts`, which is what makes a PDF built on a laptop
-byte-identical to one built in CI. Because the subsets are embedded in a
-distributed artifact, their licences are recorded here rather than left to the
-renderer.
-
-Verified 2026-09-15 against the NOTICE file of github.com/typst/typst-assets at
-commit 94dcb990edb36311ef85162baa26e4a8205e0bf0, which is the repository that
-ships the font files.
-
-  Libertinus Serif                SIL Open Font License, Version 1.1
-    Copyright (c) 2012-2024 The Libertinus Project Authors, with Reserved Font
-    Names "Linux Libertine", "Biolinum", "STIX Fonts".
-    Used for body text and headings.
-
-  New Computer Modern             GUST Font License, Version 1.0
-    Applies to every NewComputerModern face except NewCM10-Regular, which
-    upstream distributes under the NewComputerModern License with a
-    Distribution Exception. Present because typst bundles it; not selected by
-    this theme.
-
-  New Computer Modern Math        as above
-    Present because typst bundles it; this theme sets no mathematics.
-
-  DejaVu Sans Mono                Bitstream Vera Fonts Copyright
-    Fonts are (c) 2003 Bitstream, Inc. DejaVu changes are in the public domain.
-    "Bitstream Vera" is a trademark of Bitstream, Inc.; the DejaVu faces are
-    renamed precisely so that the trademark condition is met.
-    Used for code, inline literals and the revision hash on each cover.
-
-The OFL's requirement that font software "must not be sold by itself" and the
-GUST licence's conditions both concern redistribution of the *font software*.
-Neither restricts a document produced with the fonts: the OFL says so in terms
-("The requirement for fonts to remain under this license does not apply to any
-document created using the Font Software").
-
-
-BUILD-TIME DEPENDENCIES
------------------------
-
-  pandoc                          GPL-2.0-or-later
-    github.com/jgm/pandoc. Invoked as an external program by
-    scripts/build-docs.py. No pandoc source or object code is linked into or
-    distributed with this project, so its copyleft terms do not reach the
-    contents of this repository or the PDFs it produces.
-
-  typst                           Apache-2.0
-    github.com/typst/typst, with bundled assets from typst/typst-assets, also
-    Apache-2.0. Invoked as pandoc's PDF engine.
-
-  poppler (pdftotext, pdfinfo)    GPL-2.0-or-later
-    poppler.freedesktop.org. Invoked as an external program by the overflow
-    check and the reproducibility fingerprint. Same reasoning as pandoc.
-
-  PyYAML                          MIT
-  jsonschema                      MIT
-    Installed into a local .venv by `make deps`, never vendored. These are the
-    only two Python packages the checks require; scripts/doctor.sh and
-    scripts/link-check.sh deliberately require neither, so that a broken Python
-    can still be diagnosed and links can still be checked.
-
-
-RUN-TIME DEPENDENCIES UNDER THE DATABRICKS LICENSE
---------------------------------------------------
-
-Two tools this pack instructs the reader to install carry the Databricks
-License rather than an OSI-approved one:
+Two of them carry the Databricks License rather than an OSI-approved one:
 
   Databricks CLI                  Databricks License
     github.com/databricks/cli
@@ -116,14 +49,36 @@ repository bundles either. Anyone using this pack is already a Databricks
 customer, so the licence's scope is not a new constraint on them; it is a
 constraint on how this repository may ship.
 
+The five harnesses, the editors and the package managers named in the
+documentation are named nominatively and are not dependencies of anything in
+this repository. The reader chooses one and installs it under its own terms.
 
-OTHER TOOLS NAMED BUT NOT DEPENDED ON
--------------------------------------
 
-  OpenTofu                        MPL-2.0
-    github.com/opentofu/opentofu. The IaC binary this pack verifies against.
-    Chosen over Terraform because a publicly forkable repository should not
-    require a BUSL-licensed binary to run its own checks. The configuration is
-    written to the Databricks provider and is expected to work with Terraform,
-    but only OpenTofu was exercised. Treat Terraform parity as untested rather
-    than as a claim made here.
+WHAT THIS REPOSITORY'S OWN CHECKS DEPEND ON
+-------------------------------------------
+
+  shellcheck                      GPL-3.0-or-later
+    github.com/koalaman/shellcheck. Invoked as an external program by
+    `make lint`, never linked or distributed. Optional: without it the shell
+    scripts are still parsed, just not linted.
+
+  python3                         Python Software Foundation License
+    Invoked by `make config` to validate the example configuration files, using
+    only the standard library. There is no Python source code in this
+    repository. `make config` exits 2 rather than reporting a pass when python3
+    is absent.
+
+scripts/doctor.sh and scripts/link-check.sh are POSIX shell and require no
+interpreter beyond the shell and curl, deliberately: a broken Python must not be
+able to stop you diagnosing a broken Python. See
+docs/DECISIONS/0004-posix-sh-for-diagnostics.md.
+
+
+THE ILLUSTRATIONS
+-----------------
+
+The images in docs/assets/img/ and in the README were generated with an
+image model and are decorative. They contain no third-party brand asset and no
+reproduced artwork. docs/assets/img/README.md records how they were made and the
+rule they are held to: every point an image illustrates is also made in prose, a
+table or a diagram on the same page, so nothing is load-bearing on an image.
